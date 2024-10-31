@@ -30,6 +30,10 @@ private extension MainSceneDIContainer {
   func makeCalendarViewModel(actions: CalendarViewModelActions) -> any CalendarViewModel {
     return DefaultCalendarViewModel(actions: actions)
   }
+  
+  func makeNotificationViewModel() -> any NotificationViewModel {
+    return DefaultNotificationViewModel()
+  }
 }
 
 // MARK: - MainCoordinatorDependencies
@@ -45,6 +49,10 @@ extension MainSceneDIContainer: MainCoordinatorDependencies {
 
 // MARK: - HomeCoordinatorDependencies
 extension MainSceneDIContainer: HomeCoordinatorDependencies {
+  func makeNotificationCoordinator(navigationController: UINavigationController?) -> NotificationCoordinator {
+    return NotificationCoordinator(dependencies: self, navigationController: navigationController)
+  }
+  
   func makeHomeViewController(actions: HomeViewModelActions) -> HomeViewController {
     let viewModel = self.makeHomeViewModel(actions: actions)
     return HomeViewController(viewModel: viewModel)
@@ -56,5 +64,13 @@ extension MainSceneDIContainer: CalendarCoordinatorDependencies {
   func makeCalendarViewController(actions: CalendarViewModelActions) -> CalendarViewController {
     let viewModel = self.makeCalendarViewModel(actions: actions)
     return CalendarViewController(viewModel: viewModel)
+  }
+}
+
+// MARK: - NotificationCoordinatorDependencies
+extension MainSceneDIContainer: NotificationCoordinatorDependencies {
+  func makeNotificationViewController() -> NotificationViewController {
+    let viewModel = self.makeNotificationViewModel()
+    return NotificationViewController(viewModel: viewModel)
   }
 }

@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 struct HomeViewModelActions {
-  
+  let showNotificationPage: () -> Void
 }
 
 protocol HomeViewModelInput {
@@ -17,24 +17,27 @@ protocol HomeViewModelInput {
   func numberOfItemsInSection() -> Int
   func cellForItemAt(indexPath: IndexPath) -> Product
   func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath)
+  func didTapNotificationButton()
+  func didTapSearchButton()
+  func didTapAddButton()
 }
 
 protocol HomeViewModelOutput {
-  var itemsPublisher: AnyPublisher<[Product], Never> { get }
+  var reloadDataPublisher: AnyPublisher<Void, Never> { get }
 }
 
 protocol HomeViewModel: HomeViewModelInput, HomeViewModelOutput {}
 
 final class DefaultHomeViewModel: HomeViewModel {
+  
   // MARK: - Properties
   private let actions: HomeViewModelActions
   
   // MARK: - Output
-  @Published private var items = [Product]()
+  private var items = [Product]()
+  private var reloadDataSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
   
-  var itemsPublisher: AnyPublisher<[Product], Never> {
-    $items.eraseToAnyPublisher()
-  }
+  var reloadDataPublisher: AnyPublisher<Void, Never> { reloadDataSubject.eraseToAnyPublisher() }
   
   // MARK: - LifeCycle
   init(actions: HomeViewModelActions) {
@@ -55,6 +58,7 @@ final class DefaultHomeViewModel: HomeViewModel {
         )
       )
     }
+    reloadDataSubject.send()
   }
   
   func numberOfItemsInSection() -> Int {
@@ -68,5 +72,17 @@ final class DefaultHomeViewModel: HomeViewModel {
   func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath) {
     // call delete API by repository
     items.remove(at: indexPath.row)
+  }
+  
+  func didTapNotificationButton() {
+    actions.showNotificationPage()
+  }
+  
+  func didTapSearchButton() {
+    print("DEBUG: 검색 버튼 tapped")
+  }
+  
+  func didTapAddButton() {
+    print("DEBUG: 추가 버튼 tapped")
   }
 }

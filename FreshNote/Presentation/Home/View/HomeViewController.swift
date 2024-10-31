@@ -11,6 +11,7 @@ import Combine
 final class HomeViewController: BaseViewController {
   // MARK: - Properties
   private let viewModel: any HomeViewModel
+  
   private let tableView: UITableView = {
     let tv = UITableView(frame: .zero)
     tv.estimatedRowHeight = 100
@@ -21,6 +22,30 @@ final class HomeViewController: BaseViewController {
   }()
   
   private var subscriptions = Set<AnyCancellable>()
+  
+  private let searchButton: UIButton = {
+    let btn = UIButton()
+    let image = UIImage(systemName: "magnifyingglass")?
+      .resized(to: CGSize(width: 27, height: 27))
+    btn.setImage(image, for: .normal)
+    return btn
+  }()
+  
+  private let addButton: UIButton = {
+    let btn = UIButton()
+    let image = UIImage(systemName: "plus")?
+      .resized(to: CGSize(width: 27, height: 27))
+    btn.setImage(image, for: .normal)
+    return btn
+  }()
+  
+  private let notificationButton: UIButton = {
+    let btn = UIButton()
+    let image = UIImage(systemName: "bell")?
+      .resized(to: CGSize(width: 27, height: 27))
+    btn.setImage(image, for: .normal)
+    return btn
+  }()
   
   // MARK: - LifeCycle
   init(viewModel: any HomeViewModel) {
@@ -37,6 +62,7 @@ final class HomeViewController: BaseViewController {
     viewModel.viewDidLoad()
     setupTableView()
     setNavigationBar()
+    addTargets()
     bind(to: self.viewModel)
   }
   
@@ -63,14 +89,23 @@ extension HomeViewController {
   }
   
   private func setNavigationBar() {
+    navigationItem.leftBarButtonItem = UIBarButtonItem(customView: notificationButton)
+    let rightBarButtonItems = [addButton, searchButton].map { UIBarButtonItem(customView: $0) }
+    navigationItem.rightBarButtonItems = rightBarButtonItems
     navigationItem.titleView = FreshNoteTitleView()
   }
   
   private func bind(to viewModel: any HomeViewModel) {
-    viewModel.itemsPublisher.sink { [weak self] products in
-//      self?.tableView.reloadData()
+    viewModel.reloadDataPublisher.sink { [weak self] in
+      self?.tableView.reloadData()
     }
     .store(in: &subscriptions)
+  }
+  
+  private func addTargets() {
+    notificationButton.addTarget(self, action: #selector(notificationButtonTapped), for: .touchUpInside)
+    searchButton.addTarget(self, action: #selector(searchButtonTapped), for: .touchUpInside)
+    addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
   }
 }
 
@@ -107,8 +142,26 @@ extension HomeViewController: UITableViewDelegate {
       tableView.deleteRows(at: [indexPath], with: .automatic)
       completionHandler(true)
     }
-    deleteAction.backgroundColor = .red
     
     return UISwipeActionsConfiguration(actions: [deleteAction])
+  }
+  
+  func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+    cell.selectionStyle = .none
+  }
+}
+
+// MARK: - Actions
+private extension HomeViewController {
+  @objc func notificationButtonTapped() {
+    viewModel.didTapNotificationButton()
+  }
+  
+  @objc func searchButtonTapped() {
+    viewModel.didTapSearchButton()
+  }
+  
+  @objc func addButtonTapped() {
+    viewModel.didTapAddButton()
   }
 }
