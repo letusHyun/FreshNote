@@ -9,6 +9,7 @@ import UIKit
 
 protocol HomeCoordinatorDependencies: AnyObject {
   func makeHomeViewController(actions: HomeViewModelActions) -> HomeViewController
+  func makeSearchCoordinator(navigationController: UINavigationController?) -> SearchCoordinator
   func makeNotificationCoordinator(navigationController: UINavigationController?) -> NotificationCoordinator
 }
 
@@ -27,9 +28,11 @@ final class HomeCoordinator: BaseCoordinator {
 // MARK: - Start
 extension HomeCoordinator {
   func start() {
-    let actions = HomeViewModelActions { [weak self] in
+    let actions = HomeViewModelActions(showNotificationPage: { [weak self] in
       self?.showNotificationPage()
-    }
+    }, showSearchPage: { [weak self] in
+      self?.showSearchPage()
+    })
     let homeViewController = dependencies.makeHomeViewController(actions: actions)
     navigationController?.pushViewController(homeViewController, animated: true)
   }
@@ -43,11 +46,19 @@ extension HomeCoordinator {
     childCoordinators[childCoordinator.identifier] = childCoordinator
     childCoordinator.start()
   }
+  
+  private func showSearchPage() {
+    let childCoordinator = dependencies.makeSearchCoordinator(navigationController: navigationController)
+    childCoordinator.finishDelegate = self
+    childCoordinators[childCoordinator.identifier] = childCoordinator
+    childCoordinator.start()
+  }
+  
 }
 
 // MARK: - CoordinatorFinishDelegate
 extension HomeCoordinator: CoordinatorFinishDelegate {
   func coordinatorDidFinish(_ childCoordinator: BaseCoordinator) {
-    childCoordinator.childCoordinators.removeValue(forKey: childCoordinator.identifier)
+    childCoordinators.removeValue(forKey: childCoordinator.identifier)
   }
 }

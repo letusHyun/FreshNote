@@ -8,13 +8,12 @@
 import UIKit
 
 protocol NotificationCoordinatorDependencies: AnyObject {
-  func makeNotificationViewController() -> NotificationViewController
+  func makeNotificationViewController(actions: NotificationViewModelActions) -> NotificationViewController
 }
 
 final class NotificationCoordinator: BaseCoordinator {
   // MARK: - Properties
   private let dependencies: any NotificationCoordinatorDependencies
-  
   
   // MARK: - LifeCycle
   init(
@@ -30,9 +29,20 @@ final class NotificationCoordinator: BaseCoordinator {
   }
 }
 
+// MARK: - Start
 extension NotificationCoordinator {
   func start() {
-    let viewController = dependencies.makeNotificationViewController()
+    let actions = NotificationViewModelActions(pop: { [weak self] in
+      self?.pop()
+    })
+    let viewController = dependencies.makeNotificationViewController(actions: actions)
     navigationController?.pushViewController(viewController, animated: true)
+  }
+}
+
+extension NotificationCoordinator {
+  func pop() {
+    finish()
+    navigationController?.popViewController(animated: true)
   }
 }

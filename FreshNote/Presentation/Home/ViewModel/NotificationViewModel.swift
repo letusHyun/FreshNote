@@ -8,6 +8,10 @@
 import Foundation
 import Combine
 
+struct NotificationViewModelActions {
+  let pop: () -> Void
+}
+
 protocol NotificationViewModel: NotificaionViewModelInput, NotificationViewModelOutput { }
 
 protocol NotificaionViewModelInput {
@@ -15,6 +19,7 @@ protocol NotificaionViewModelInput {
   func numberOfRowsInSection() -> Int
   func cellForRow(at indexPath: IndexPath) -> Notification
   func didSelectRow(at indexPath: IndexPath)
+  func didTapBackButton()
 }
 
 protocol NotificationViewModelOutput {
@@ -25,6 +30,7 @@ protocol NotificationViewModelOutput {
 final class DefaultNotificationViewModel: NotificationViewModel {
   // MARK: - Properties
   private var notifications: [Notification] = []
+  private let actions: NotificationViewModelActions
   
   // MARK: - Output
   private let reloadDataSubject = PassthroughSubject<Void, Never>()
@@ -38,7 +44,9 @@ final class DefaultNotificationViewModel: NotificationViewModel {
   }
   
   // MARK: - LifeCycle
-  
+  init(actions: NotificationViewModelActions) {
+    self.actions = actions
+  }
   // MARK: - Input
   func viewDidLoad() {
     // fetch api
@@ -73,5 +81,9 @@ final class DefaultNotificationViewModel: NotificationViewModel {
     // 성공 시
     notifications[indexPath.row].isViewed.toggle()
     reloadDataSubject.send()
+  }
+  
+  func didTapBackButton() {
+    actions.pop()
   }
 }

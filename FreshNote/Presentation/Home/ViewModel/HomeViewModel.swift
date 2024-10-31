@@ -10,6 +10,7 @@ import Combine
 
 struct HomeViewModelActions {
   let showNotificationPage: () -> Void
+  let showSearchPage: () -> Void
 }
 
 protocol HomeViewModelInput {
@@ -79,7 +80,7 @@ final class DefaultHomeViewModel: HomeViewModel {
   }
   
   func didTapSearchButton() {
-    print("DEBUG: 검색 버튼 tapped")
+    actions.showSearchPage()
   }
   
   func didTapAddButton() {

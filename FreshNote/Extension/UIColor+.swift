@@ -54,5 +54,8 @@ enum FNColor: String {
   case orange1 = "#FFA03A"
   /// #FF8A41
   case orange2 = "#FF8A41"
+  /// #716D6D
+  case gray = "#716D6D"
+  /// #929090
+  case placeholder = "#929090"
 }
-

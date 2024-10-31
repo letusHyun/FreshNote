@@ -27,8 +27,6 @@ final class OnboardingSceneDIContainer {
     return DefaultOnboardingViewModel(actions: actions)
   }
   
-  
-  
   func makeDateTimeSettingViewModel(
     actions: DateTimeSettingViewModelActions
   ) -> DateTimeSettingViewModel {

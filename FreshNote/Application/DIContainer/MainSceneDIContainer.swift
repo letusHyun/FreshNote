@@ -8,6 +8,7 @@
 import UIKit
 
 final class MainSceneDIContainer {
+  
   struct Dependencies {
     // service객체
   }
@@ -31,8 +32,12 @@ private extension MainSceneDIContainer {
     return DefaultCalendarViewModel(actions: actions)
   }
   
-  func makeNotificationViewModel() -> any NotificationViewModel {
-    return DefaultNotificationViewModel()
+  func makeNotificationViewModel(actions: NotificationViewModelActions) -> any NotificationViewModel {
+    return DefaultNotificationViewModel(actions: actions)
+  }
+  
+  func makeSearchViewModel(actions: SearchViewModelActions) -> any SearchViewModel {
+    return DefaultSearchViewModel(actions: actions)
   }
 }
 
@@ -49,28 +54,36 @@ extension MainSceneDIContainer: MainCoordinatorDependencies {
 
 // MARK: - HomeCoordinatorDependencies
 extension MainSceneDIContainer: HomeCoordinatorDependencies {
+  func makeSearchCoordinator(navigationController: UINavigationController?) -> SearchCoordinator {
+    return SearchCoordinator(dependencies: self, navigationController: navigationController)
+  }
+  
   func makeNotificationCoordinator(navigationController: UINavigationController?) -> NotificationCoordinator {
     return NotificationCoordinator(dependencies: self, navigationController: navigationController)
   }
   
   func makeHomeViewController(actions: HomeViewModelActions) -> HomeViewController {
-    let viewModel = self.makeHomeViewModel(actions: actions)
-    return HomeViewController(viewModel: viewModel)
+    return HomeViewController(viewModel: makeHomeViewModel(actions: actions))
   }
 }
 
 // MARK: - CalendarCoordinatorDependencies
 extension MainSceneDIContainer: CalendarCoordinatorDependencies {
   func makeCalendarViewController(actions: CalendarViewModelActions) -> CalendarViewController {
-    let viewModel = self.makeCalendarViewModel(actions: actions)
-    return CalendarViewController(viewModel: viewModel)
+    return CalendarViewController(viewModel: makeCalendarViewModel(actions: actions))
   }
 }
 
 // MARK: - NotificationCoordinatorDependencies
 extension MainSceneDIContainer: NotificationCoordinatorDependencies {
-  func makeNotificationViewController() -> NotificationViewController {
-    let viewModel = self.makeNotificationViewModel()
-    return NotificationViewController(viewModel: viewModel)
+  func makeNotificationViewController(actions: NotificationViewModelActions) -> NotificationViewController {
+    return NotificationViewController(viewModel: makeNotificationViewModel(actions: actions))
+  }
+}
+
+// MARK: - SearchCoordinatorDependencies
+extension MainSceneDIContainer: SearchCoordinatorDependencies {
+  func makeSearchViewController(actions: SearchViewModelActions) -> SearchViewController {
+    return SearchViewController(viewModel: makeSearchViewModel(actions: actions))
   }
 }
