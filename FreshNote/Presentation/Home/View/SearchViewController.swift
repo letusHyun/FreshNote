@@ -11,27 +11,35 @@ import Combine
 final class SearchViewController: BaseViewController {
   // MARK: - Properties
   private let tableView: UITableView = {
-    let tableView = UITableView()
-    tableView.rowHeight = 60
-    tableView.register(
+    let tb = UITableView()
+    tb.rowHeight = 60
+    tb.register(
       RecentSearchKeywordCell.self,
       forCellReuseIdentifier: RecentSearchKeywordCell.id
     )
-    return tableView
+    return tb
   }()
   
-  private let textField: BaseTextField = {
-    let tf = BaseTextField()
-    tf.placeholder = "상품명, 카테고리, 메모를 검색해주세요."
+  private let textField: PaddingTextField = {
+    let tf = PaddingTextField()
     tf.layer.borderColor = UIColor(fnColor: .orange2).cgColor
     tf.layer.borderWidth = 0.8
     tf.layer.cornerRadius = 3
+    let placeholderAttr = NSAttributedString(
+      string: "상품명, 카테고리, 메모를 검색해주세요.",
+      attributes: [
+        NSAttributedString.Key.font: UIFont.pretendard(size: 12, weight: ._400),
+        NSAttributedString.Key.foregroundColor: UIColor(fnColor: .placeholder)
+      ]
+    )
+    tf.attributedPlaceholder = placeholderAttr
     return tf
   }()
   
   private let cancelButton: UIButton = {
     let btn = UIButton()
     btn.setTitle("취소", for: .normal)
+    btn.titleLabel?.font = UIFont.pretendard(size: 15, weight: ._400)
     btn.setTitleColor(UIColor(fnColor: .gray), for: .normal)
     return btn
   }()
@@ -54,9 +62,20 @@ final class SearchViewController: BaseViewController {
     defer { viewModel.viewDidLoad() }
     bind(to: self.viewModel)
     setupTableView()
-    
+    addTargets()
   }
   
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    navigationController?.setNavigationBarHidden(true, animated: true)
+    tabBarController?.tabBar.isHidden = true
+  }
+  
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    navigationController?.setNavigationBarHidden(false, animated: true)
+    tabBarController?.tabBar.isHidden = false
+  }
   
   // MARK: - SetupUI
   override func setupLayout() {
@@ -106,15 +125,28 @@ extension SearchViewController {
     return lb
   }
   
-  private func bind(to viewModel: any SearchViewModel) {
-    viewModel.reloadDataPublisher.sink { [weak self] _ in
-      self?.tableView.reloadData()
-    }
-    .store(in: &subscriptions)
+  private func addTargets() {
+    cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
   }
   
   private func setupTableView() {
     tableView.dataSource = self
+    tableView.delegate = self
+  }
+}
+
+// MARK: - Bind
+private extension SearchViewController {
+  func bind(to viewModel: any SearchViewModel) {
+    viewModel.reloadDataPublisher.sink { [weak self] _ in
+      self?.tableView.reloadData()
+    }
+    .store(in: &subscriptions)
+    
+    viewModel.deleteRowsPublisher.sink { [weak self] indexPath in
+      self?.tableView.deleteRows(at: [indexPath], with: .fade)
+    }
+    .store(in: &subscriptions)
   }
 }
 
@@ -135,10 +167,37 @@ extension SearchViewController: UITableViewDataSource {
       withIdentifier: RecentSearchKeywordCell.id,
       for: indexPath
     ) as? RecentSearchKeywordCell else { return UITableViewCell() }
+    cell.delegate = self
     
     let keyword = viewModel.cellForRow(at: indexPath)
     cell.configure(keyword: keyword)
     
     return cell
+  }
+}
+
+// MARK: - Actions
+private extension SearchViewController {
+  @objc func cancelButtonTapped() {
+    viewModel.didTapCancelButton()
+  }
+}
+
+extension SearchViewController: UITableViewDelegate {
+  func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+    cell.selectionStyle = .none
+  }
+  
+  func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    // 버튼 클릭 시, 해당 키워드의 검색 결과 화면으로 이동
+  }
+}
+
+// MARK: - RecentSearchKeywordCellDelegate
+extension SearchViewController: RecentSearchKeywordCellDelegate {
+  func didTapDeleteButton(in cell: UITableViewCell) {
+    guard let indexPath = tableView.indexPath(for: cell) else { return }
+    
+    viewModel.didTapKeywordDeleteButton(at: indexPath)
   }
 }

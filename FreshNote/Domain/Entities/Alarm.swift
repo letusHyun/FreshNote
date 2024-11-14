@@ -8,6 +8,15 @@
 import Foundation
 
 struct Alarm {
-  var date: Date
-  var time: DateComponents
+  var date: Int
+  let hour: Int
+  let minute: Int
+  
+  var dictionary: [String: Any] {
+    return [
+      "date": self.date,
+      "hour": self.hour,
+      "minute": self.minute
+    ]
+  }
 }

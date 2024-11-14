@@ -5,8 +5,8 @@
 //  Created by SeokHyun on 10/23/24.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 struct DateTimeSettingViewModelActions {
   let showHome: () -> Void
@@ -14,7 +14,7 @@ struct DateTimeSettingViewModelActions {
 
 protocol DateTimeSettingViewModelInput {
   func viewDidLoad()
-  func didTapStartButton(dDay: Int, time: String)
+  func didTapStartButton(dateInt: Int, hourMinuteDate: Date)
 }
 
 protocol DateTimeSettingViewModelOutput {
@@ -28,15 +28,16 @@ protocol DateTimeSettingViewModel: DateTimeSettingViewModelInput, DateTimeSettin
 final class DefaultDateTimeSettingViewModel: DateTimeSettingViewModel {
   // MARK: - Properties
   private let actions : DateTimeSettingViewModelActions
-  private let dateTimeRepository: any DateTimeRepository
+  private var subscriptions = Set<AnyCancellable>()
+  @Published private var error: (any Error)?
+  private let alarmSaveUseCase: any AlarmSaveUseCase
   
   // MARK: - Output
   
-  
   // MARK: - LifeCycle
-  init(actions: DateTimeSettingViewModelActions, dateTimeRepository: any DateTimeRepository) {
+  init(actions: DateTimeSettingViewModelActions, alarmSaveUseCase: any AlarmSaveUseCase) {
     self.actions = actions
-    self.dateTimeRepository = dateTimeRepository
+    self.alarmSaveUseCase = alarmSaveUseCase
   }
   
   // MARK: - Input
@@ -44,23 +45,22 @@ final class DefaultDateTimeSettingViewModel: DateTimeSettingViewModel {
     
   }
   
-  func didTapStartButton(dDay: Int, time: String) {
-    // TODO: - 파이어베이스에 파라미터 저장 성공 후, 화면 전환
+  func didTapStartButton(dateInt: Int, hourMinuteDate: Date) {
     
-    // 뷰컨에적용해야함!
-//    let cancellable = dateTimeRepository.saveDateTime(userID: "123", dDay: dDay, time: time)
-//      .sink { completion in
-//        
-//        switch completion {
-//        case .finished:
-//          break
-//        case .failure(let error):
-//          print("error: \(error)")
-//        }
-//      } receiveValue: { _ in
-//        print("성공적으로 파이어베이스에 저장됨.")
-//      }
-
-    actions.showHome()
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "HH:mm"
+    let selectedTime = hourMinuteDate
+    let hourMinute = dateFormatter.string(from: selectedTime).components(separatedBy: ":").map { Int($0) ?? 0 }
+    let hour = hourMinute.first ?? 0, minute = hourMinute.last ?? 0
+    
+    alarmSaveUseCase.saveAlarm(date: dateInt, hour: hour, minute: minute)
+      .sink { [weak self] completion in
+        guard case .failure(let error) = completion else { return }
+        self?.error = error
+        
+      } receiveValue: { [weak self] _ in
+        self?.actions.showHome()
+      }
+      .store(in: &subscriptions)
   }
 }

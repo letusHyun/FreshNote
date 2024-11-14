@@ -6,21 +6,25 @@
 //
 
 import UIKit
+import AuthenticationServices
+import Combine
+import CryptoKit
+import FirebaseAuth
 
 final class OnboardingViewController: BaseViewController {
   // MARK: - Properties
+  private var subscriptions = Set<AnyCancellable>()
+  
   private let freshNoteTitle: FreshNoteTitleView = {
     let view = FreshNoteTitleView()
     return view
   }()
   
-  private lazy var collectionView: UICollectionView = {
+  private let collectionView: UICollectionView = {
     let flowLayout = UICollectionViewFlowLayout()
     flowLayout.scrollDirection = .horizontal
     flowLayout.minimumLineSpacing = .zero
     let cv = UICollectionView(frame: .zero, collectionViewLayout: flowLayout)
-    cv.dataSource = self
-    cv.delegate = self
     cv.isPagingEnabled = true
     cv.register(OnboardingCell.self, forCellWithReuseIdentifier: OnboardingCell.id)
     cv.bounces = false
@@ -38,32 +42,10 @@ final class OnboardingViewController: BaseViewController {
     return pageControl
   }()
   
-  private let buttonStackView: UIStackView = {
-    let sv = UIStackView()
-    sv.axis = .vertical
-    sv.distribution = .fillEqually
-    sv.spacing = 12
-    return sv
-  }()
-  
-  private let kakaoLoginButton: LoginButton = {
-    let button = LoginButton(
-      title: "카카오 로그인",
-      imagePath: "kakaoLoginLogo",
-      titleColor: .black,
-      backgroundColor: UIColor(hex: "#FEE500")
-    )
-    button.isHidden = true
-    button.alpha = 0
-    return button
-  }()
-  
-  private let appleLoginButton: LoginButton = {
-    let button = LoginButton(
-      title: "Apple 로그인",
-      imagePath: "kakaoLoginLogo",
-      titleColor: .white,
-      backgroundColor: .black
+  private let appleLoginButton: ASAuthorizationAppleIDButton = {
+    let button = ASAuthorizationAppleIDButton(
+      authorizationButtonType: .signIn,
+      authorizationButtonStyle: .black
     )
     button.isHidden = true
     button.alpha = 0
@@ -86,6 +68,7 @@ final class OnboardingViewController: BaseViewController {
     super.viewDidLoad()
     addTargets()
     setNavigationConfiguration()
+    setupCollectionView()
   }
   
   // MARK: - SetupUI
@@ -93,14 +76,12 @@ final class OnboardingViewController: BaseViewController {
     view.addSubview(freshNoteTitle)
     view.addSubview(collectionView)
     view.addSubview(pageControl)
-//    view.addSubview(buttonStackView)
-    view.addSubview(kakaoLoginButton)
+    view.addSubview(appleLoginButton)
     
     freshNoteTitle.translatesAutoresizingMaskIntoConstraints = false
     collectionView.translatesAutoresizingMaskIntoConstraints = false
     pageControl.translatesAutoresizingMaskIntoConstraints = false
-    kakaoLoginButton.translatesAutoresizingMaskIntoConstraints = false
-    buttonStackView.translatesAutoresizingMaskIntoConstraints = false
+    appleLoginButton.translatesAutoresizingMaskIntoConstraints = false
     
     let safeArea = view.safeAreaLayoutGuide
     NSLayoutConstraint.activate([
@@ -115,10 +96,10 @@ final class OnboardingViewController: BaseViewController {
       pageControl.topAnchor.constraint(equalTo: collectionView.bottomAnchor),
       pageControl.centerXAnchor.constraint(equalTo: safeArea.centerXAnchor),
     ] + [
-      kakaoLoginButton.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -20),
-      kakaoLoginButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 26.5),
-      kakaoLoginButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -26.5),
-      kakaoLoginButton.heightAnchor.constraint(equalToConstant: 60)
+      appleLoginButton.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -20),
+      appleLoginButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 26.5),
+      appleLoginButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -26.5),
+      appleLoginButton.heightAnchor.constraint(equalToConstant: 60)
     ])
   }
 }
@@ -171,31 +152,118 @@ extension OnboardingViewController: UICollectionViewDelegateFlowLayout {
   }
 }
 
+// MARK: - Private Helpers
 extension OnboardingViewController {
+  private func setupCollectionView() {
+    collectionView.dataSource = self
+    collectionView.delegate = self
+    collectionView.backgroundColor = view.backgroundColor
+  }
+  
   private func configureLoginButtonAnimation() {
     collectionView.isScrollEnabled = false
     pageControl.isHidden = true
-    kakaoLoginButton.isHidden = false
+    appleLoginButton.isHidden = false
     UIView.animate(withDuration: 1.5) {
-      self.kakaoLoginButton.alpha = 1
+      self.appleLoginButton.alpha = 1
     }
   }
-}
-
-// MARK: - Prvate Helpers
-extension OnboardingViewController {
+  
   private func addTargets() {
-    kakaoLoginButton.addTarget(self, action: #selector(startButtonTapped), for: .touchUpInside)
+//    kakaoLoginButton.addTarget(self, action: #selector(startButtonTapped), for: .touchUpInside)
+    appleLoginButton.addTarget(self, action: #selector(appleButtonTapped), for: .touchUpInside)
   }
   
   private func setNavigationConfiguration() {
     navigationController?.navigationBar.isHidden = true
+  }
+  
+//  private func signIn(credential: AuthCredential) -> AnyPublisher<AppleAuthResultModel, any Error> {
+//    return Future { promise in
+//      Auth.auth().signIn(with: credential) { result, error  in
+//        if let error = error {
+//          promise(.failure(error)); return
+//        }
+//        if let result {
+//          promise(.success(AppleAuthResultModel(user: result.user))); return
+//        }
+//      }
+//    }
+//    .eraseToAnyPublisher()
+//  }
+  
+  private func randomNonceString(length: Int = 32) -> String {
+    precondition(length > 0)
+    var randomBytes = [UInt8](repeating: 0, count: length)
+    let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+    if errorCode != errSecSuccess {
+      fatalError(
+        "Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)"
+      )
+    }
+    
+    let charset: [Character] =
+    Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+    
+    let nonce = randomBytes.map { byte in
+      // Pick a random character from the set, wrapping around if needed.
+      charset[Int(byte) % charset.count]
+    }
+    
+    return String(nonce)
+  }
+  
+  @available(iOS 13, *)
+  private func sha256(_ input: String) -> String {
+    let inputData = Data(input.utf8)
+    let hashedData = SHA256.hash(data: inputData)
+    let hashString = hashedData.compactMap {
+      String(format: "%02x", $0)
+    }.joined()
+    
+    return hashString
+  }
+}
+
+struct AppleAuthResultModel {
+  let uid: String
+  let email: String?
+  let photoURL: String?
+  
+  init(user: User) {
+    self.uid = user.uid
+    self.email = user.email
+    self.photoURL = user.photoURL?.absoluteString
   }
 }
 
 // MARK: - Actions
 private extension OnboardingViewController {
   @objc func startButtonTapped() {
-    viewModel.didTapLoginButton()
+//    viewModel.didTapLoginButton()
+  }
+  
+  @objc func appleButtonTapped() {
+
+    let appleIDProvider = ASAuthorizationAppleIDProvider()
+    let nonce = randomNonceString()
+    let request = appleIDProvider.createRequest()
+    request.requestedScopes = [.fullName, .email]
+    request.nonce = sha256(nonce)
+    let authController = ASAuthorizationController(authorizationRequests: [request])
+    
+    authController.presentationContextProvider = self
+    viewModel.didTapAppleButton(authController: authController, nonce: nonce)
+//    startSignInWithAppleFlow()
+  }
+}
+
+// MARK: - ASAuthorizationControllerPresentationContextProviding
+extension OnboardingViewController: ASAuthorizationControllerPresentationContextProviding {
+  func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+    guard let window = view.window else {
+      return UIWindow()
+    }
+    return window
   }
 }

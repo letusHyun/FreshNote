@@ -146,7 +146,8 @@ extension ProductCell {
     
     // outer
     NSLayoutConstraint.activate([
-      thumbnailImageView.heightAnchor.constraint(equalToConstant: 80),
+      thumbnailImageView.topAnchor.constraint(equalTo: textContainerView.topAnchor, constant: 5),
+      thumbnailImageView.bottomAnchor.constraint(equalTo: textContainerView.bottomAnchor, constant: -5),
       thumbnailImageView.widthAnchor.constraint(equalToConstant: 80),
       thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
       thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10)

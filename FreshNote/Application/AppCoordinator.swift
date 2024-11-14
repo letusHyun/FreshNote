@@ -6,6 +6,8 @@
 //
 
 import UIKit
+import FirebaseAuth
+import AuthenticationServices
 
 protocol AppCoordinatorDelegate: AnyObject {
   func setRootViewController(_ viewController: UIViewController)
@@ -28,20 +30,51 @@ final class AppCoordinator {
   }
   
   func start() {
-    isLoggedIn() ? startMainFlow() : startOnboardingFlow()
+    Task { @MainActor in
+      let isLoggedIn = await self.isLoggedIn()
+      isLoggedIn ? startMainFlow() : startOnboardingFlow()
+    }
   }
 }
 
 // MARK: - Private Helpers
 private extension AppCoordinator {
-  func isLoggedIn() -> Bool {
-    // TODO: - userDefaults에 저장한 것을 꺼내와서 사용
-//    return false
-    return true
+  func isLoggedIn() async -> Bool {
+    // Firebase 로그인 확인
+    guard let currentUser = Auth.auth().currentUser else { return false }
+    
+    // Firebase 토큰 검증
+    do {
+      let _ = try await currentUser.getIDToken()
+    } catch {
+      print("파이어베이스 토큰 검증 실패: \(error)")
+      try? Auth.auth().signOut()
+      return false
+    }
+    
+    // Apple Credential 검증
+    guard let appleCredential = currentUser.providerData.first(where: { $0.providerID == "apple.com" }) else {
+      return false
+    }
+    
+    do {
+      return try await validateAppleCredential(userID: appleCredential.uid)
+    }
+    catch {
+      return false
+    }
+  }
+  
+  func validateAppleCredential(userID: String) async throws -> Bool {
+    let appleIDProvider = ASAuthorizationAppleIDProvider()
+    let credentialState = try await appleIDProvider.credentialState(forUserID: userID)
+    
+    return credentialState == .authorized
   }
   
   func startOnboardingFlow() {
-    let navigatonController = UINavigationController()
+    let navigatonController = UINavigationController(barStyle: .default)
+    
     delegate?.setRootViewController(navigatonController)
     let childCoordinator = dependencies.makeOnboardingCoordinator(navigationController: navigatonController)
     childCoordinator.finishDelegate = self
@@ -51,6 +84,7 @@ private extension AppCoordinator {
   
   func startMainFlow() {
     let tabBarController = UITabBarController()
+    
     delegate?.setRootViewController(tabBarController)
     let childCoordinator = dependencies.makeMainCoordinator(tabBarController: tabBarController)
     childCoordinator.finishDelegate = self

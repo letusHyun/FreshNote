@@ -9,60 +9,31 @@ import Foundation
 import Combine
 import FirebaseFirestore
 
-final class DefaultDateTimeRepository {
-  // MARK: - Dependencies
-  private let db: Firestore
+final class DefaultDateTimeRepository: DateTimeRepository {
+  private let service: FirestoreService
   
-  // MARK: - LifeCycle
-  init(db: Firestore = Firestore.firestore()) {
-    self.db = db
+  init(service: FirestoreService) {
+    self.service = service
   }
-}
-
-// MARK: - DateTimeRepository
-extension DefaultDateTimeRepository: DateTimeRepository {
-  func fetchDateTime(userID: String, dDay: Int, time: String) -> AnyPublisher<AlarmDateTimeDTO, any Error> {
-    let userIDRef = FirestoreDocumentPath.user(userID: userID).reference(db: db)
+  
+  func fetchDateTime(userID: String) -> AnyPublisher<Alarm, any Error> {
+    let publisher: AnyPublisher<AlarmDTO, any Error> = service.getDocument(
+      documentPath: FirestorePath.userID(userID: userID)
+    )
     
-    return Future<AlarmDateTimeDTO, any Error> { promise in
-      userIDRef.getDocument { document, error in
-        if let error = error {
-          promise(.failure(error))
-        }
-        
-        if let document = document, document.exists {
-          do {
-            let alarmData = try document.data(as: AlarmDateTimeDTO.self)
-            promise(.success(alarmData))
-          } catch {
-            promise(.failure(error))
-          }
-        }
-      }
-    }
-    .eraseToAnyPublisher()
+    return publisher.tryMap { $0.toDomain() }
+      .eraseToAnyPublisher()
   }
   
-  func saveDateTime(userID: String, dDay: Int, time: String) -> AnyPublisher<Void, any Error> {
-    let userIDRef = FirestoreDocumentPath.user(userID: userID).reference(db: db)
-    let alarmDateTimeDTO = AlarmDateTimeDTO(dDay: dDay, time: time)
+  func saveDateTime(date: Int, hour: Int, minute: Int) -> AnyPublisher<Void, any Error> {
+    guard let userID = FirebaseUserManager.shared.userID
+    else { return Fail(error: FirestoreServiceError.noUser).eraseToAnyPublisher() }
     
-    return Future { promise in
-      do {
-        try userIDRef.setData(from: alarmDateTimeDTO, merge: true) { error in
-          if let error = error {
-            promise(.failure(error)) // firestore의 error
-          }
-          promise(.success(()))
-        }
-      } catch {
-        promise(.failure(error)) // 서버 연결 실패
-      }
-    }
-    .eraseToAnyPublisher()
+    let requestDTO = AlarmDTO(date: date, hour: hour, minute: minute)
+    return service.setDocument(
+      documentPath: FirestorePath.userID(userID: userID),
+      requestDTO: requestDTO,
+      merge: true
+    )
   }
-  
-//  func updateDateTime(userID: String, dDay: Int, time: String) -> AnyPublisher<Void, Never> {
-//    return Just(_).eraseToAnyPublisher()
-//  }
 }

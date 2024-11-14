@@ -17,7 +17,7 @@ protocol HomeViewModelInput {
   func viewDidLoad()
   func numberOfItemsInSection() -> Int
   func cellForItemAt(indexPath: IndexPath) -> Product
-  func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath)
+  func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath, handler: @escaping (Bool) -> Void)
   func didTapNotificationButton()
   func didTapSearchButton()
   func didTapAddButton()
@@ -25,11 +25,13 @@ protocol HomeViewModelInput {
 
 protocol HomeViewModelOutput {
   var reloadDataPublisher: AnyPublisher<Void, Never> { get }
+  var deleteRowsPublisher: AnyPublisher<(IndexPath, (Bool) -> Void), Never> { get }
 }
 
 protocol HomeViewModel: HomeViewModelInput, HomeViewModelOutput {}
 
 final class DefaultHomeViewModel: HomeViewModel {
+  typealias SwipeCompletion = (Bool) -> Void
   
   // MARK: - Properties
   private let actions: HomeViewModelActions
@@ -37,8 +39,10 @@ final class DefaultHomeViewModel: HomeViewModel {
   // MARK: - Output
   private var items = [Product]()
   private var reloadDataSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
+  private var deleteRowsSubject: PassthroughSubject<(IndexPath, SwipeCompletion), Never> = PassthroughSubject()
   
   var reloadDataPublisher: AnyPublisher<Void, Never> { reloadDataSubject.eraseToAnyPublisher() }
+  var deleteRowsPublisher: AnyPublisher<(IndexPath, SwipeCompletion), Never> { deleteRowsSubject.eraseToAnyPublisher() }
   
   // MARK: - LifeCycle
   init(actions: HomeViewModelActions) {
@@ -70,9 +74,11 @@ final class DefaultHomeViewModel: HomeViewModel {
     return items[indexPath.row]
   }
   
-  func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath) {
+  func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath, handler: @escaping SwipeCompletion) {
     // call delete API by repository
     items.remove(at: indexPath.row)
+    
+    deleteRowsSubject.send((indexPath, handler))
   }
   
   func didTapNotificationButton() {

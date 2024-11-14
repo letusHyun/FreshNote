@@ -20,7 +20,22 @@ final class OnboardingSceneDIContainer {
     self.dependencies = dependencies
   }
   
-  // MARK: - Presentations
+  
+  // MARK: - Domain Layer
+  func makeAlarmSaveUseCase() -> any AlarmSaveUseCase {
+    return DefaultAlarmSaveUseCase(dateTimeRepository: self.makeDateTimeRepository())
+  }
+  
+  // MARK: - Data Layer
+  func makeFirestoreService() -> any FirestoreService {
+    return DefaultFirestoreService()
+  }
+  
+  func makeDateTimeRepository() -> any DateTimeRepository {
+    return DefaultDateTimeRepository(service: self.makeFirestoreService())
+  }
+  
+  // MARK: - Presentation Layer
   func makeOnboardingViewModel(
     actions: OnboardingViewModelActions
   ) -> OnboardingViewModel {
@@ -31,7 +46,7 @@ final class OnboardingSceneDIContainer {
     actions: DateTimeSettingViewModelActions
   ) -> DateTimeSettingViewModel {
     // TODO: - DefaultRepository 분리해야함
-    return DefaultDateTimeSettingViewModel(actions: actions, dateTimeRepository: DefaultDateTimeRepository())
+    return DefaultDateTimeSettingViewModel(actions: actions, alarmSaveUseCase: self.makeAlarmSaveUseCase())
   }
 }
 

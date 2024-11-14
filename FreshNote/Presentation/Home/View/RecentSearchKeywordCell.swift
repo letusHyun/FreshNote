@@ -7,6 +7,10 @@
 
 import UIKit
 
+protocol RecentSearchKeywordCellDelegate: AnyObject {
+  func didTapDeleteButton(in cell: UITableViewCell)
+}
+
 final class RecentSearchKeywordCell: UITableViewCell {
   // MARK: - Properties
   static var id: String {
@@ -27,10 +31,13 @@ final class RecentSearchKeywordCell: UITableViewCell {
     return button
   }()
   
+  weak var delegate: RecentSearchKeywordCellDelegate?
+  
   // MARK: - LifeCycle
   override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
     super.init(style: style, reuseIdentifier: reuseIdentifier)
     setupLayout()
+    setupStyle()
     addTargets()
   }
   
@@ -78,11 +85,15 @@ extension RecentSearchKeywordCell {
     
     deleteButton.setContentCompressionResistancePriority(.required, for: .horizontal)
   }
+  
+  private func setupStyle() {
+    
+  }
 }
 
 // MARK: - Actions
 private extension RecentSearchKeywordCell {
   @objc func deleteButtonTapped() {
-    print("DEBUG: 삭제 버튼 tapped")
+    delegate?.didTapDeleteButton(in: self)
   }
 }

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 final class DateTimeSettingViewController: BaseViewController {
   struct Constants {
@@ -17,6 +18,7 @@ final class DateTimeSettingViewController: BaseViewController {
     let label = UILabel()
     label.text = "원하는 날짜와 알람 시간을 지정해주세요."
     label.textAlignment = .center
+    label.textColor = UIColor(fnColor: .text3)
     label.font = .pretendard(size: 16, weight: ._400)
     return label
   }()
@@ -24,6 +26,7 @@ final class DateTimeSettingViewController: BaseViewController {
   private let dMinusLabel: UILabel = {
     let label = UILabel()
     label.text = "D - "
+    label.textColor = UIColor(fnColor: .text3)
     label.font = .pretendard(size: Constants.dateSize, weight: ._400)
     return label
   }()
@@ -35,6 +38,7 @@ final class DateTimeSettingViewController: BaseViewController {
     textField.font = .pretendard(size: Constants.dateSize, weight: ._400)
     textField.keyboardType = .numberPad
     textField.delegate = self
+    textField.setPlaceholderColor(UIColor(fnColor: .gray))
     return textField
   }()
   
@@ -48,6 +52,7 @@ final class DateTimeSettingViewController: BaseViewController {
     let datePicker = UIDatePicker()
     datePicker.datePickerMode = .time
     datePicker.preferredDatePickerStyle = .compact
+//    datePicker.tintColor = .black
     return datePicker
   }()
   
@@ -103,7 +108,9 @@ final class DateTimeSettingViewController: BaseViewController {
       dateStackView.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 40),
       dateStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
     ] + [
-      datePicker.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+//      datePicker.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 150),
+//      datePicker.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -150),
+      datePicker.centerXAnchor.constraint(equalTo: dateStackView.centerXAnchor),
       datePicker.topAnchor.constraint(equalTo: dateStackView.bottomAnchor, constant: 40)
     ] + [
       startButton.heightAnchor.constraint(equalToConstant: 54),
@@ -152,12 +159,6 @@ private extension DateTimeSettingViewController {
     // TODO: - textField와 날짜를 입력해야 버튼 눌리도록 설정하기
     
     let dateToInt = Int(dateTextField.text ?? "0") ?? 0
-    
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "HH:mm"
-    let selectedTime = datePicker.date
-    let timeString = dateFormatter.string(from: selectedTime)
-    
-    viewModel.didTapStartButton(dDay: dateToInt, time: timeString)
+    viewModel.didTapStartButton(dateInt: dateToInt, hourMinuteDate: datePicker.date)
   }
 }

@@ -21,6 +21,8 @@ final class NotificationViewController: BaseViewController {
   
   private var subscriptions = Set<AnyCancellable>()
   
+  private let backButton = NavigationBackButton()
+  
   // MARK: - LifeCycle
   init(viewModel: any NotificationViewModel) {
     self.viewModel = viewModel
@@ -33,9 +35,10 @@ final class NotificationViewController: BaseViewController {
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    bind(to: self.viewModel)
     setupTableView()
     setupNavigationBar()
+    bindActions()
+    bind(to: self.viewModel)
     viewModel.viewDidLoad()
   }
   
@@ -65,15 +68,6 @@ extension NotificationViewController {
       return lb
     }()
     navigationItem.titleView = titleLabel
-    
-    let backButton: UIButton = {
-      let btn = UIButton()
-      let image = UIImage(systemName: "chevron.backward")?.withRenderingMode(.alwaysTemplate)
-      btn.setImage(image, for: .normal)
-      btn.tintColor = UIColor(fnColor: .orange2)
-      btn.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
-      return btn
-    }()
     navigationItem.leftBarButtonItem = UIBarButtonItem(customView: backButton)
   }
   
@@ -126,7 +120,11 @@ extension NotificationViewController: UITableViewDelegate {
 
 // MARK: - Actions
 private extension NotificationViewController {
-  @objc func backButtonTapped() {
-    viewModel.didTapBackButton()
+  func bindActions() {
+    backButton.publisher(for: .touchUpInside)
+      .sink { [weak self] _ in
+        self?.viewModel.didTapBackButton()
+      }
+      .store(in: &subscriptions)
   }
 }

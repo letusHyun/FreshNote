@@ -23,6 +23,10 @@ final class SearchCoordinator: BaseCoordinator {
     self.dependencies = dependencies
     super.init(navigationController: navigationController)
   }
+  
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
+  }
 }
 
 // MARK: - Start

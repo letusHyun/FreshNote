@@ -59,11 +59,12 @@ final class HomeViewController: BaseViewController {
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    viewModel.viewDidLoad()
     setupTableView()
     setNavigationBar()
-    addTargets()
+    
+    bindActions()
     bind(to: self.viewModel)
+    viewModel.viewDidLoad()
   }
   
   override func setupLayout() {
@@ -100,12 +101,11 @@ extension HomeViewController {
       self?.tableView.reloadData()
     }
     .store(in: &subscriptions)
-  }
-  
-  private func addTargets() {
-    notificationButton.addTarget(self, action: #selector(notificationButtonTapped), for: .touchUpInside)
-    searchButton.addTarget(self, action: #selector(searchButtonTapped), for: .touchUpInside)
-    addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
+    
+    viewModel.deleteRowsPublisher.sink { [weak self] indexPath, swipeCompletion in
+      self?.tableView.deleteRows(at: [indexPath], with: .automatic)
+      swipeCompletion(true)
+    }.store(in: &subscriptions)
   }
 }
 
@@ -138,9 +138,11 @@ extension HomeViewController: UITableViewDelegate {
       style: .destructive,
       title: "삭제"
     ) { [weak self] (action, view, completionHandler) in
-      self?.viewModel.trailingSwipeActionsConfigurationForRowAt(indexPath: indexPath)
-      tableView.deleteRows(at: [indexPath], with: .automatic)
-      completionHandler(true)
+      
+      self?.viewModel.trailingSwipeActionsConfigurationForRowAt(
+        indexPath: indexPath,
+        handler: completionHandler
+      )
     }
     
     return UISwipeActionsConfiguration(actions: [deleteAction])
@@ -153,15 +155,23 @@ extension HomeViewController: UITableViewDelegate {
 
 // MARK: - Actions
 private extension HomeViewController {
-  @objc func notificationButtonTapped() {
-    viewModel.didTapNotificationButton()
-  }
-  
-  @objc func searchButtonTapped() {
-    viewModel.didTapSearchButton()
-  }
-  
-  @objc func addButtonTapped() {
-    viewModel.didTapAddButton()
+  func bindActions() {
+    self.notificationButton.publisher(for: .touchUpInside)
+      .sink { [weak self] _ in
+        self?.viewModel.didTapNotificationButton()
+      }
+      .store(in: &self.subscriptions)
+    
+    self.searchButton.publisher(for: .touchUpInside)
+      .sink { [weak self] _ in
+        self?.viewModel.didTapSearchButton()
+      }
+      .store(in: &subscriptions)
+    
+    self.addButton.publisher(for: .touchUpInside)
+      .sink { [weak self] _ in
+        self?.viewModel.didTapAddButton()
+      }
+      .store(in: &subscriptions)
   }
 }
