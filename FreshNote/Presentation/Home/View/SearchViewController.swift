@@ -29,7 +29,7 @@ final class SearchViewController: BaseViewController {
       string: "상품명, 카테고리, 메모를 검색해주세요.",
       attributes: [
         NSAttributedString.Key.font: UIFont.pretendard(size: 12, weight: ._400),
-        NSAttributedString.Key.foregroundColor: UIColor(fnColor: .placeholder)
+        NSAttributedString.Key.foregroundColor: UIColor(fnColor: .gray1)
       ]
     )
     tf.attributedPlaceholder = placeholderAttr

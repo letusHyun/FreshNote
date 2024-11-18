@@ -44,8 +44,8 @@ final class MainCoordinator: BaseCoordinator {
       tag: 1
     )
     
-    tabBarController?.tabBar.tintColor = UIColor(fnColor: .text3)
-    tabBarController?.tabBar.unselectedItemTintColor = UIColor(fnColor: .placeholder)
+    tabBarController?.tabBar.tintColor = UIColor(fnColor: .gray3)
+    tabBarController?.tabBar.unselectedItemTintColor = UIColor(fnColor: .gray1)
     tabBarController?.viewControllers = [homeNaviController, calendarNaviController]
     
     let homeCoordinator = dependencies.makeHomeCoordinator(navigationController: homeNaviController)

@@ -31,7 +31,7 @@ final class HomeViewController: BaseViewController {
     return btn
   }()
   
-  private let addButton: UIButton = {
+  private let addProductButton: UIButton = {
     let btn = UIButton()
     let image = UIImage(systemName: "plus")?
       .resized(to: CGSize(width: 27, height: 27))
@@ -59,25 +59,25 @@ final class HomeViewController: BaseViewController {
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    setupTableView()
-    setNavigationBar()
+    self.setupTableView()
+    self.setNavigationBar()
     
-    bindActions()
-    bind(to: self.viewModel)
-    viewModel.viewDidLoad()
+    self.bindActions()
+    self.bind(to: self.viewModel)
+    self.viewModel.viewDidLoad()
   }
   
   override func setupLayout() {
-    view.addSubview(tableView)
+    view.addSubview(self.tableView)
     
-    tableView.translatesAutoresizingMaskIntoConstraints = false
+    self.tableView.translatesAutoresizingMaskIntoConstraints = false
     
     let safeArea = view.safeAreaLayoutGuide
     NSLayoutConstraint.activate([
-      tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      tableView.topAnchor.constraint(equalTo: safeArea.topAnchor),
-      tableView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+      self.tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      self.tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      self.tableView.topAnchor.constraint(equalTo: safeArea.topAnchor),
+      self.tableView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
     ])
   }
 }
@@ -85,13 +85,13 @@ final class HomeViewController: BaseViewController {
 // MARK: - Private Helpers
 extension HomeViewController {
   private func setupTableView() {
-    tableView.dataSource = self
-    tableView.delegate = self
+    self.tableView.dataSource = self
+    self.tableView.delegate = self
   }
   
   private func setNavigationBar() {
-    navigationItem.leftBarButtonItem = UIBarButtonItem(customView: notificationButton)
-    let rightBarButtonItems = [addButton, searchButton].map { UIBarButtonItem(customView: $0) }
+    navigationItem.leftBarButtonItem = UIBarButtonItem(customView: self.notificationButton)
+    let rightBarButtonItems = [self.addProductButton, self.searchButton].map { UIBarButtonItem(customView: $0) }
     navigationItem.rightBarButtonItems = rightBarButtonItems
     navigationItem.titleView = FreshNoteTitleView()
   }
@@ -100,19 +100,19 @@ extension HomeViewController {
     viewModel.reloadDataPublisher.sink { [weak self] in
       self?.tableView.reloadData()
     }
-    .store(in: &subscriptions)
+    .store(in: &self.subscriptions)
     
     viewModel.deleteRowsPublisher.sink { [weak self] indexPath, swipeCompletion in
       self?.tableView.deleteRows(at: [indexPath], with: .automatic)
       swipeCompletion(true)
-    }.store(in: &subscriptions)
+    }.store(in: &self.subscriptions)
   }
 }
 
 // MARK: - UITableViewDataSource
 extension HomeViewController: UITableViewDataSource {
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return viewModel.numberOfItemsInSection()
+    self.viewModel.numberOfItemsInSection()
   }
   
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -121,7 +121,7 @@ extension HomeViewController: UITableViewDataSource {
       for: indexPath
     ) as? ProductCell else { return UITableViewCell() }
     
-    let product = viewModel.cellForItemAt(indexPath: indexPath)
+    let product = self.viewModel.cellForItemAt(indexPath: indexPath)
     cell.configure(product: product)
     
     return cell
@@ -166,12 +166,12 @@ private extension HomeViewController {
       .sink { [weak self] _ in
         self?.viewModel.didTapSearchButton()
       }
-      .store(in: &subscriptions)
+      .store(in: &self.subscriptions)
     
-    self.addButton.publisher(for: .touchUpInside)
+    self.addProductButton.publisher(for: .touchUpInside)
       .sink { [weak self] _ in
-        self?.viewModel.didTapAddButton()
+        self?.viewModel.didTapAddProductButton()
       }
-      .store(in: &subscriptions)
+      .store(in: &self.subscriptions)
   }
 }

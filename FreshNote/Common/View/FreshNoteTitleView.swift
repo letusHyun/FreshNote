@@ -17,7 +17,7 @@ final class FreshNoteTitleView: UIView {
     let label = UILabel()
     let text = "Fresh Note"
     label.text = text
-    label.textColor = UIColor(fnColor: .text3)
+    label.textColor = UIColor(fnColor: .gray3)
     label.font = UIFont(name: "AvenirLTStd-Book", size: 30)
     
     return label
@@ -25,7 +25,7 @@ final class FreshNoteTitleView: UIView {
   
   private let underlineView: UIView = {
     let view = UIView()
-    view.backgroundColor = UIColor(fnColor: .text3)
+    view.backgroundColor = UIColor(fnColor: .gray3)
     return view
   }()
   

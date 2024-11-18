@@ -18,7 +18,7 @@ final class DateTimeSettingViewController: BaseViewController {
     let label = UILabel()
     label.text = "원하는 날짜와 알람 시간을 지정해주세요."
     label.textAlignment = .center
-    label.textColor = UIColor(fnColor: .text3)
+    label.textColor = UIColor(fnColor: .gray3)
     label.font = .pretendard(size: 16, weight: ._400)
     return label
   }()
@@ -26,7 +26,7 @@ final class DateTimeSettingViewController: BaseViewController {
   private let dMinusLabel: UILabel = {
     let label = UILabel()
     label.text = "D - "
-    label.textColor = UIColor(fnColor: .text3)
+    label.textColor = UIColor(fnColor: .gray3)
     label.font = .pretendard(size: Constants.dateSize, weight: ._400)
     return label
   }()

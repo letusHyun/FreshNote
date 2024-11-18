@@ -11,6 +11,10 @@ protocol HomeCoordinatorDependencies: AnyObject {
   func makeHomeViewController(actions: HomeViewModelActions) -> HomeViewController
   func makeSearchCoordinator(navigationController: UINavigationController?) -> SearchCoordinator
   func makeNotificationCoordinator(navigationController: UINavigationController?) -> NotificationCoordinator
+  func makeProductCoordinator(
+    navigationController: UINavigationController?,
+    mode: ProductViewModelMode
+  ) -> ProductCoordinator
 }
 
 final class HomeCoordinator: BaseCoordinator {
@@ -32,33 +36,49 @@ extension HomeCoordinator {
       self?.showNotificationPage()
     }, showSearchPage: { [weak self] in
       self?.showSearchPage()
+    }, showProductPage: { [weak self] in
+      self?.showProductPage()
     })
-    let homeViewController = dependencies.makeHomeViewController(actions: actions)
-    navigationController?.pushViewController(homeViewController, animated: true)
+    
+    let homeViewController = self.dependencies.makeHomeViewController(actions: actions)
+    self.navigationController?.pushViewController(homeViewController, animated: true)
   }
 }
 
 // MARK: - Private Helpers
 extension HomeCoordinator {
   private func showNotificationPage() {
-    let childCoordinator = dependencies.makeNotificationCoordinator(navigationController: navigationController)
+    let childCoordinator = self.dependencies.makeNotificationCoordinator(
+      navigationController: self.navigationController
+    )
     childCoordinator.finishDelegate = self
-    childCoordinators[childCoordinator.identifier] = childCoordinator
+    self.childCoordinators[childCoordinator.identifier] = childCoordinator
     childCoordinator.start()
   }
   
   private func showSearchPage() {
-    let childCoordinator = dependencies.makeSearchCoordinator(navigationController: navigationController)
+    let childCoordinator = self.dependencies.makeSearchCoordinator(
+      navigationController: self.navigationController
+    )
     childCoordinator.finishDelegate = self
-    childCoordinators[childCoordinator.identifier] = childCoordinator
+    self.childCoordinators[childCoordinator.identifier] = childCoordinator
     childCoordinator.start()
   }
   
+  private func showProductPage() {
+    let childCoordinator = self.dependencies.makeProductCoordinator(
+      navigationController: self.navigationController,
+      mode: .create
+    )
+    childCoordinator.finishDelegate = self
+    self.childCoordinators[childCoordinator.identifier] = childCoordinator
+    childCoordinator.start()
+  }
 }
 
 // MARK: - CoordinatorFinishDelegate
 extension HomeCoordinator: CoordinatorFinishDelegate {
   func coordinatorDidFinish(_ childCoordinator: BaseCoordinator) {
-    childCoordinators.removeValue(forKey: childCoordinator.identifier)
+    self.childCoordinators.removeValue(forKey: childCoordinator.identifier)
   }
 }

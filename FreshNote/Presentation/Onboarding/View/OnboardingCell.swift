@@ -17,7 +17,7 @@ final class OnboardingCell: UICollectionViewCell {
   private let descriptionLabel: UILabel = {
     let label = UILabel()
     label.font = .pretendard(size: 16, weight: ._600)
-    label.textColor = UIColor(fnColor: .text3)
+    label.textColor = UIColor(fnColor: .gray3)
     label.numberOfLines = 0
     label.textAlignment = .center
     return label

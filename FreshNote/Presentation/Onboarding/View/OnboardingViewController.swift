@@ -37,7 +37,7 @@ final class OnboardingViewController: BaseViewController {
     pageControl.numberOfPages = viewModel.dataSourceCount()
     pageControl.currentPage = 0
     pageControl.pageIndicatorTintColor = UIColor(hex: "#B8B5B5")
-    pageControl.currentPageIndicatorTintColor = UIColor(fnColor: .text3)
+    pageControl.currentPageIndicatorTintColor = UIColor(fnColor: .gray3)
     pageControl.isUserInteractionEnabled = false
     return pageControl
   }()

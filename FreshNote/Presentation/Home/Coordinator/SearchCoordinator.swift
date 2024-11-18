@@ -44,7 +44,7 @@ extension SearchCoordinator {
 // MARK: - Private Helpers
 extension SearchCoordinator {
   private func pop() {
-    navigationController?.popViewController(animated: true)
-    finish()
+    self.navigationController?.popViewController(animated: true)
+    self.finish()
   }
 }

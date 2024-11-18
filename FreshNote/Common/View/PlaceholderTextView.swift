@@ -12,7 +12,7 @@ final class PlaceholderTextView: UITextView {
   // MARK: - Properties
   private let placeholderLabel: UILabel = {
     let label = UILabel()
-    label.textColor = UIColor(fnColor: .placeholder)
+    label.textColor = UIColor(fnColor: .gray1)
     return label
   }()
   

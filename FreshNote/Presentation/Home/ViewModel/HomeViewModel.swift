@@ -11,6 +11,7 @@ import Combine
 struct HomeViewModelActions {
   let showNotificationPage: () -> Void
   let showSearchPage: () -> Void
+  let showProductPage: () -> Void
 }
 
 protocol HomeViewModelInput {
@@ -20,7 +21,7 @@ protocol HomeViewModelInput {
   func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath, handler: @escaping (Bool) -> Void)
   func didTapNotificationButton()
   func didTapSearchButton()
-  func didTapAddButton()
+  func didTapAddProductButton()
 }
 
 protocol HomeViewModelOutput {
@@ -53,7 +54,7 @@ final class DefaultHomeViewModel: HomeViewModel {
   func viewDidLoad() {
     // firebase store에 접근해서 데이터 fetch
     for i in 0...20 {
-      items.append(
+      self.items.append(
         Product(
           name: "\(i+1)  제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목",
           expirationDate: Date(),
@@ -63,33 +64,33 @@ final class DefaultHomeViewModel: HomeViewModel {
         )
       )
     }
-    reloadDataSubject.send()
+    self.reloadDataSubject.send()
   }
   
   func numberOfItemsInSection() -> Int {
-    items.count
+    self.items.count
   }
   
   func cellForItemAt(indexPath: IndexPath) -> Product {
-    return items[indexPath.row]
+    self.items[indexPath.row]
   }
   
   func trailingSwipeActionsConfigurationForRowAt(indexPath: IndexPath, handler: @escaping SwipeCompletion) {
     // call delete API by repository
-    items.remove(at: indexPath.row)
+    self.items.remove(at: indexPath.row)
     
-    deleteRowsSubject.send((indexPath, handler))
+    self.deleteRowsSubject.send((indexPath, handler))
   }
   
   func didTapNotificationButton() {
-    actions.showNotificationPage()
+    self.actions.showNotificationPage()
   }
   
   func didTapSearchButton() {
-    actions.showSearchPage()
+    self.actions.showSearchPage()
   }
   
-  func didTapAddButton() {
-    print("DEBUG: 추가 버튼 tapped")
+  func didTapAddProductButton() {
+    self.actions.showProductPage()
   }
 }
