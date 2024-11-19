@@ -25,7 +25,9 @@ final class NavigationBackButton: UIButton {
 
 extension NavigationBackButton {
   private func setupUI() {
-    let image = UIImage(systemName: "chevron.backward")?.withRenderingMode(.alwaysTemplate)
+    let image = UIImage(systemName: "chevron.backward")?
+      .resized(to: CGSize(width: 16, height: 24))?
+      .withRenderingMode(.alwaysTemplate)
     
     self.setImage(image, for: .normal)
     self.tintColor = UIColor(fnColor: .orange2)
