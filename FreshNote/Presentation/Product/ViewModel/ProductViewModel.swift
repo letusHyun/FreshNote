@@ -16,6 +16,7 @@ protocol ProductViewModel: ProductViewModelInput & ProductViewModelOutput { }
 protocol ProductViewModelInput {
   func viewDidLoad()
   func didTapBackButton()
+  func didTapSaveButton()
 }
 
 protocol ProductViewModelOutput {
@@ -44,6 +45,12 @@ final class DefaultProductViewModel: ProductViewModel {
   
   func didTapBackButton() {
     actions.pop()
+  }
+  
+  func didTapSaveButton() {
+    // 네트워크 save 요청 후
+      // 성공 시 pop
+      // 실패 시 return
   }
   
   // MARK: - Output

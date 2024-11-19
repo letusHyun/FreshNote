@@ -9,6 +9,7 @@ import Foundation
 
 /// Fresh Note에서 기본적으로 사용하는 color입니다.
 enum FNColor: String {
+  /// #FFFFFF
   case realBack = "#FFFFFF"
   /// #FFA03A
   case orange1 = "#FFA03A"

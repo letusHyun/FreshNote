@@ -32,7 +32,7 @@ final class AppCoordinator {
   func start() {
     Task { @MainActor in
       let isLoggedIn = await self.isLoggedIn()
-      isLoggedIn ? startMainFlow() : startOnboardingFlow()
+      isLoggedIn ? self.startMainFlow() : self.startOnboardingFlow()
     }
   }
 }
@@ -58,7 +58,7 @@ private extension AppCoordinator {
     }
     
     do {
-      return try await validateAppleCredential(userID: appleCredential.uid)
+      return try await self.validateAppleCredential(userID: appleCredential.uid)
     }
     catch {
       return false
@@ -73,10 +73,12 @@ private extension AppCoordinator {
   }
   
   func startOnboardingFlow() {
-    let navigatonController = UINavigationController(barStyle: .default)
+    let navigatonController = UINavigationController()
+    navigatonController.setupBarAppearance()
     
-    delegate?.setRootViewController(navigatonController)
-    let childCoordinator = dependencies.makeOnboardingCoordinator(navigationController: navigatonController)
+    
+    self.delegate?.setRootViewController(navigatonController)
+    let childCoordinator = self.dependencies.makeOnboardingCoordinator(navigationController: navigatonController)
     childCoordinator.finishDelegate = self
     self.childCoordinator = childCoordinator
     childCoordinator.start()
@@ -85,7 +87,7 @@ private extension AppCoordinator {
   func startMainFlow() {
     let tabBarController = UITabBarController()
     
-    delegate?.setRootViewController(tabBarController)
+    self.delegate?.setRootViewController(tabBarController)
     let childCoordinator = dependencies.makeMainCoordinator(tabBarController: tabBarController)
     childCoordinator.finishDelegate = self
     self.childCoordinator = childCoordinator
@@ -97,9 +99,9 @@ private extension AppCoordinator {
 extension AppCoordinator: CoordinatorFinishDelegate {
   func coordinatorDidFinish(_ childCoordinator: BaseCoordinator) {
     if childCoordinator is OnboardingCoordinator {
-      startMainFlow()
+      self.startMainFlow()
     } else if childCoordinator is MainCoordinator {
-      startOnboardingFlow()
+      self.startOnboardingFlow()
     }
   }
 }

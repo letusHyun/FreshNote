@@ -33,27 +33,27 @@ final class MainCoordinator: BaseCoordinator {
   func start() {
     // TODO: - 나머지 탭들도 구성해야합니다.
     // tabBarController에 들어갈 window에서 알 필요가 없기 때문에 내비컨들은 여기서 만들어주는것이 적합함
-    let homeNaviController = makeNavigationController(
+    let homeNaviController = self.makeNavigationController(
       title: "홈",
       tabBarImage: UIImage(systemName: "house"),
       tag: 0
     )
-    let calendarNaviController = makeNavigationController(
+    let calendarNaviController = self.makeNavigationController(
       title: "캘린더",
       tabBarImage: UIImage(systemName: "calendar"),
       tag: 1
     )
     
-    tabBarController?.tabBar.tintColor = UIColor(fnColor: .gray3)
-    tabBarController?.tabBar.unselectedItemTintColor = UIColor(fnColor: .gray1)
-    tabBarController?.viewControllers = [homeNaviController, calendarNaviController]
+    self.tabBarController?.tabBar.tintColor = UIColor(fnColor: .gray3)
+    self.tabBarController?.tabBar.unselectedItemTintColor = UIColor(fnColor: .gray1)
+    self.tabBarController?.viewControllers = [homeNaviController, calendarNaviController]
     
-    let homeCoordinator = dependencies.makeHomeCoordinator(navigationController: homeNaviController)
-    childCoordinators[homeCoordinator.identifier] = homeCoordinator
+    let homeCoordinator = self.dependencies.makeHomeCoordinator(navigationController: homeNaviController)
+    self.childCoordinators[homeCoordinator.identifier] = homeCoordinator
     homeCoordinator.start()
     
-    let calendarCoordinator = dependencies.makeCalendarCoordinator(navigationController: calendarNaviController)
-    childCoordinators[calendarCoordinator.identifier] = calendarCoordinator
+    let calendarCoordinator = self.dependencies.makeCalendarCoordinator(navigationController: calendarNaviController)
+    self.childCoordinators[calendarCoordinator.identifier] = calendarCoordinator
     calendarCoordinator.start()
   }
 }
@@ -61,7 +61,9 @@ final class MainCoordinator: BaseCoordinator {
 // MARK: - Private Helpers
 private extension MainCoordinator {
   private func makeNavigationController(title: String, tabBarImage: UIImage?, tag: Int) -> UINavigationController {
-    let navigationController = UINavigationController(barStyle: .default)
+    let navigationController = UINavigationController()
+    navigationController.setupBarAppearance()
+    
     let tabBarItem = UITabBarItem(
       title: title,
       image: tabBarImage,

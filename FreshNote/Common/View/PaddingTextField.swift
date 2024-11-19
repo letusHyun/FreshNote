@@ -30,7 +30,7 @@ class PaddingTextField: UITextField {
   // MARK: - Private Helpers
   private func bind() {
     self.keyboardToolbar.tapPublisher
-      .receive(on: RunLoop.main)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] in
         self?.endEditing(true)
       }

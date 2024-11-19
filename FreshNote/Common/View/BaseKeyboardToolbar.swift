@@ -42,7 +42,7 @@ class BaseKeyboardToolbar: UIToolbar {
   // MARK: - Private Helpers
   private func bind() {
     self.doneButton.publisher(for: .touchUpInside)
-      .receive(on: RunLoop.main)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
         self?.tapSubject.send()
       }

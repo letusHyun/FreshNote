@@ -71,7 +71,7 @@ final class PlaceholderTextView: UITextView {
   
   private func bind() {
     self.keyboardToolbar.tapPublisher
-      .receive(on: RunLoop.main)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
         self?.endEditing(true)
       }
