@@ -31,6 +31,8 @@ final class DynamicTextField: UITextField {
     return iv
   }()
   
+  private let keyboardToolbar = BaseKeyboardToolbar()
+  
   // MARK: - LifeCycle
   init(borderColor: UIColor, widthConstant: CGFloat) {
     self.widthConstant = widthConstant
@@ -40,6 +42,7 @@ final class DynamicTextField: UITextField {
     self.setupLayout()
     self.setupStyle(borderColor: borderColor)
     self.bind()
+    self.setupToolbar()
     self.delegate = self
   }
   
@@ -59,6 +62,10 @@ final class DynamicTextField: UITextField {
   }
   
   // MARK: - Private Helpers
+  private func setupToolbar() {
+    self.inputAccessoryView = self.keyboardToolbar
+  }
+  
   private func setupLayout() {
     self.layer.addSublayer(self.dashLayer)
     self.addSubview(self.pencilImageView)
@@ -95,6 +102,14 @@ final class DynamicTextField: UITextField {
       }
       .sink { [weak self] newWidth in
         self?.updateLayout(with: newWidth)
+      }
+      .store(in: &self.subscriptions)
+    
+    self.keyboardToolbar
+      .tapPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
+        self?.endEditing(true)
       }
       .store(in: &self.subscriptions)
   }
