@@ -9,6 +9,11 @@ import Combine
 import UIKit
 
 final class PlaceholderTextView: UITextView {
+  // MARK: - Constants
+  var leftPadding: CGFloat { 25 }
+  
+  var topPadding: CGFloat { 8 }
+  
   // MARK: - Properties
   private let placeholderLabel: UILabel = {
     let label = UILabel()
@@ -18,8 +23,8 @@ final class PlaceholderTextView: UITextView {
   
   var placeholder: String? {
     didSet {
-      placeholderLabel.text = placeholder
-      updatePlaceholderVisibility()
+      self.placeholderLabel.text = self.placeholder
+      self.updatePlaceholderVisibility()
     }
   }
   
@@ -34,16 +39,21 @@ final class PlaceholderTextView: UITextView {
       super.delegate
     }
     set {
-      externalDelegate = newValue
+      self.externalDelegate = newValue
       super.delegate = self
     }
   }
   
+  private let keyboardToolbar = BaseKeyboardToolbar()
+  
   // MARK: - LifeCycle
   convenience init() {
     self.init(frame: .zero, textContainer: nil)
-    setupLayout()
-    addObserver()
+    self.setupLayout()
+    self.addObserver()
+    self.setupStyle()
+    self.bind()
+    self.setupToolbar()
   }
   
   override init(frame: CGRect, textContainer: NSTextContainer?) {
@@ -55,36 +65,58 @@ final class PlaceholderTextView: UITextView {
   }
   
   // MARK: - Private Helpers
+  private func setupToolbar() {
+    self.inputAccessoryView = self.keyboardToolbar
+  }
+  
+  private func bind() {
+    self.keyboardToolbar.tapPublisher
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.endEditing(true)
+      }
+      .store(in: &self.subscriptions)
+  }
+  
   private func addObserver() {
     NotificationCenter.default
       .publisher(for: UITextView.textDidChangeNotification, object: self)
       .sink { [weak self] _ in
-        self?.updatePlaceholderVisibility()
+        self?.self.updatePlaceholderVisibility()
       }
-      .store(in: &subscriptions)
+      .store(in: &self.subscriptions)
   }
   
   private func setupLayout() {
-    addSubview(placeholderLabel)
+    addSubview(self.placeholderLabel)
     
-    placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+    self.placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
     
     NSLayoutConstraint.activate([
-      placeholderLabel.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-      placeholderLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 25)
+      self.placeholderLabel.topAnchor.constraint(equalTo: self.topAnchor, constant: self.topPadding),
+      self.placeholderLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: self.leftPadding)
     ])
   }
   
   private func updatePlaceholderVisibility() {
-    placeholderLabel.isHidden = !text.isEmpty
+    self.placeholderLabel.isHidden = !text.isEmpty
+  }
+  
+  private func setupStyle() {
+    self.textContainerInset = UIEdgeInsets(
+      top: self.topPadding,
+      left: self.leftPadding - 3,
+      bottom: .zero,
+      right: self.leftPadding
+    )
   }
 }
 
 // MARK: - UITextViewDelegate
 extension PlaceholderTextView: UITextViewDelegate {
   func textViewDidBeginEditing(_ textView: UITextView) {
-    updatePlaceholderVisibility()
+    self.updatePlaceholderVisibility()
     
-    externalDelegate?.textViewDidBeginEditing?(textView)
+    self.externalDelegate?.textViewDidBeginEditing?(textView)
   }
 }
