@@ -24,7 +24,7 @@ class CalendarCoordinator: BaseCoordinator {
   
   func start() {
     let actions = CalendarViewModelActions()
-    let viewController = dependencies.makeCalendarViewController(actions: actions)
-    navigationController?.pushViewController(viewController, animated: true)
+    let viewController = self.dependencies.makeCalendarViewController(actions: actions)
+    self.navigationController?.pushViewController(viewController, animated: true)
   }
 }
