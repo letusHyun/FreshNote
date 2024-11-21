@@ -8,13 +8,13 @@
 import Combine
 import UIKit
 
-final class ProductViewController: BaseViewController {
+final class ProductViewController: BaseViewController, KeyboardEventable {
   // MARK: - Properties
   private let viewModel: any ProductViewModel
   
   private let backButton = NavigationBackButton()
   
-  private var subscriptions = Set<AnyCancellable>()
+  var subscriptions = Set<AnyCancellable>()
   
   private let titleTextField: DynamicTextField = {
     let tf = DynamicTextField(borderColor: UIColor(fnColor: .gray3), widthConstant: 100)
@@ -32,7 +32,7 @@ final class ProductViewController: BaseViewController {
     iv.layer.cornerRadius = 8
     iv.layer.borderWidth = 2
     iv.layer.borderColor = UIColor(fnColor: .orange1).cgColor
-    iv.image = UIImage(named: "defaultCamera")?.withInsets(.init(top: 28, left: 28, bottom: 28, right: 28))
+    iv.image = UIImage(systemName: "camera")?.withInsets(.init(top: 28, left: 28, bottom: 28, right: 28))
     return iv
   }()
   
@@ -82,6 +82,48 @@ final class ProductViewController: BaseViewController {
     return tv
   }()
   
+  private let saveButton: UIButton = {
+    let btn = UIButton()
+    btn.setTitle("완료", for: .normal)
+    btn.setTitleColor(UIColor(fnColor: .gray3), for: .normal)
+    btn.titleLabel?.font = UIFont.pretendard(size: 20, weight: ._600)
+    return btn
+  }()
+  
+  var transformView: UIView { self.view }
+  
+  // TODO: - to erase
+  private let dummyStackview: UIStackView = {
+    let sv = UIStackView()
+    _=(0...2).map {
+      let lb = UILabel()
+      lb.text = "\($0)"
+      lb.textColor = .black
+      lb.font = .systemFont(ofSize: 20)
+      return lb
+    }.map {
+      sv.addArrangedSubview($0)
+    }
+    
+    sv.axis = .vertical
+    sv.alignment = .fill
+    sv.distribution = .fillEqually
+    return sv
+  }()
+  
+  private lazy var dummyTableView: UITableView = {
+    let tv = UITableView()
+    tv.register(UITableViewCell.self, forCellReuseIdentifier: "DummyCell")
+    tv.dataSource = self
+    tv.rowHeight = UITableView.automaticDimension
+    tv.estimatedRowHeight = 44
+    return tv
+  }()
+  
+  private let dummyModels: [Int] = {
+    return (0...20).map { $0 }
+  }()
+  
   // MARK: - LifeCycle
   init(viewModel: any ProductViewModel) {
     self.viewModel = viewModel
@@ -96,9 +138,20 @@ final class ProductViewController: BaseViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     self.setupNavigationBar()
-    
     self.bind(to: self.viewModel)
     self.bindAction()
+    self.bindKeyboard()
+    navigationController?.navigationBar.backgroundColor = .white
+  }
+  
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    self.tabBarController?.tabBar.isHidden = true
+  }
+  
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    self.tabBarController?.tabBar.isHidden = false
   }
   
   // MARK: - SetupUI
@@ -162,12 +215,41 @@ private extension ProductViewController {
         self?.viewModel.didTapBackButton()
       }
       .store(in: &self.subscriptions)
+    
+    self.saveButton.publisher(for: .touchUpInside)
+      .sink { [weak self] _ in
+//        self?.viewModel.didTapSaveButton()
+        guard let self = self else { return }
+        
+        // TODO: - 해당 코드는 coordinator로 들어갈 예정
+        let bottomSheetViewController = BottomSheetViewController()
+        bottomSheetViewController.add(
+          child: PhotoBottomSheetViewController(),
+          container: bottomSheetViewController.bottomSheetView
+        )
+        bottomSheetViewController.modalPresentationStyle = .overFullScreen
+        self.present(bottomSheetViewController, animated: false)
+      }
+      .store(in: &self.subscriptions)
   }
 }
 
 // MARK: - Private Helpers
 extension ProductViewController {
   private func setupNavigationBar() {
+    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.saveButton)
     self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: self.backButton)
+  }
+}
+
+extension ProductViewController: UITableViewDataSource {
+  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    dummyModels.count
+  }
+  
+  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    guard let cell = tableView.dequeueReusableCell(withIdentifier: "DummyCell", for: indexPath) as? DummyCell else { return UITableViewCell() }
+    cell.configure(text: String(dummyModels[indexPath.row]))
+    return cell
   }
 }
