@@ -14,11 +14,6 @@ import SnapKit
 /// present의 animated도 false로 설정해야 합니다.
 class BottomSheetViewController: BaseViewController {
   // MARK: - Nested
-  enum ViewState {
-    case expanded
-    case normal
-  }
-  
   enum Detent {
     /// * 0.9
     case large
@@ -64,12 +59,9 @@ class BottomSheetViewController: BaseViewController {
     }
     return 0
   }
-
-  /// bottomSheet과 safeArea Top 사이의 최솟값
-  var bottomSheetPanMinTopConstant: CGFloat = 100
   
   /// 드래그 하기 전에 bottom sheet의 top constraint value를 지정하기 위한 프로퍼티
-  private lazy var bottomSheetPanStartingTopConstraintConstant: CGFloat = self.bottomSheetPanMinTopConstant
+  private var bottomSheetPanStartingTopConstraintConstant: CGFloat?
   
   private var bottomSheetColor: UIColor {
     return UIColor(fnColor: .realBack)
@@ -118,7 +110,6 @@ class BottomSheetViewController: BaseViewController {
     fatalError("init(coder:) has not been implemented")
   }
   
-  
   override func viewDidLoad() {
     super.viewDidLoad()
     self.setupLayout()
@@ -132,7 +123,7 @@ class BottomSheetViewController: BaseViewController {
   }
   
   deinit {
-    print("DEBUG: \(Self.self) deinit")
+    print("DEBUG: \(BottomSheetViewController.self) deinit")
   }
   
   // MARK: - setupUI
@@ -193,39 +184,17 @@ class BottomSheetViewController: BaseViewController {
     }
   }
   
-  private func showBottomSheet(at state: ViewState = .normal) {
-    if state == .normal {
-      let height: CGFloat = self.view.safeAreaLayoutGuide.layoutFrame.height
-      let bottomPadding: CGFloat = self.safeAreaBottomHeight
-      
-      self.bottomSheetViewTopConstraint?.update(offset: (height + bottomPadding) - self.bottomSheetHeight)
-    } else {
-      self.bottomSheetViewTopConstraint?.update(offset: self.bottomSheetPanMinTopConstant)
-    }
+  private func showBottomSheet() {
+    let height: CGFloat = self.view.safeAreaLayoutGuide.layoutFrame.height
+    let bottomPadding: CGFloat = self.safeAreaBottomHeight
+    
+    self.bottomSheetViewTopConstraint?.update(offset: (height + bottomPadding) - self.bottomSheetHeight)
     
     UIView.animate(withDuration: 0.25, delay: .zero, options: .curveEaseIn, animations: {
       self.dimmedView.alpha = 0.7
       self.dragIndicatorView.alpha = 1
       self.view.layoutIfNeeded()
     }, completion: nil)
-  }
-  
-  private func dimAlphaWithBottomSheetTopConstraint(value: CGFloat) -> CGFloat {
-    let fullDimAlpha: CGFloat = 0.7
-    
-    let fullDimPosition = (self.viewHeightExcludingSafeArea + self.safeAreaBottomHeight - self.bottomSheetHeight) / 2
-    
-    let noDimPosition = self.viewHeightExcludingSafeArea + self.safeAreaBottomHeight
-    
-    if value < fullDimPosition {
-      return fullDimAlpha
-    }
-    
-    if value > noDimPosition {
-      return 0.0
-    }
-    
-    return fullDimAlpha * (1 - ((value - fullDimPosition) / (noDimPosition - fullDimPosition)))
   }
   
   /// number와 가장 가까운 값을 반환하는 메소드
@@ -242,6 +211,7 @@ class BottomSheetViewController: BaseViewController {
   }
   
   @objc private func viewPanned(_ panGestureRecognizer: UIPanGestureRecognizer) {
+    // 드래그 하기 전에 bottom sheet의 top constraint value를 지정하기 위한 프로퍼티
     guard let bottomSheetViewTopConstraintConstant = self.bottomSheetViewTopConstraint?
       .layoutConstraints.first?.constant
     else { return }
@@ -249,20 +219,21 @@ class BottomSheetViewController: BaseViewController {
     let translation = panGestureRecognizer.translation(in: self.view)
 
     switch panGestureRecognizer.state {
-      case .began:
+    case .began:
       self.bottomSheetPanStartingTopConstraintConstant = bottomSheetViewTopConstraintConstant
     case .changed:
       // 제한 위치를 넘기지 않을때만
-      if self.bottomSheetPanStartingTopConstraintConstant + translation.y > self.bottomSheetPanMinTopConstant {
-        // bottomSheet constraint 변환
-        self.bottomSheetViewTopConstraint?.update(offset: self.bottomSheetPanStartingTopConstraintConstant + translation.y)
+      if translation.y > 0 {
+        guard let bottomSheetPanStartingTopConstraintConstant = self.bottomSheetPanStartingTopConstraintConstant
+        else { return }
+        
+        self.bottomSheetViewTopConstraint?.update(offset: bottomSheetPanStartingTopConstraintConstant + translation.y)
       }
-      self.dimmedView.alpha = self.dimAlphaWithBottomSheetTopConstraint(value: bottomSheetViewTopConstraintConstant)
       
     case .ended:
       let velocity = panGestureRecognizer.velocity(in: self.view)
       // 스와이프 속도가 빠르면 bottomSheet 종료
-      if velocity.y > 1500 {
+      if velocity.y > 200 {
         self.hideBottomSheetAndDismiss()
         return
       }
@@ -272,14 +243,12 @@ class BottomSheetViewController: BaseViewController {
       
       let nearestValue = self.nearest(
         to: bottomSheetViewTopConstraintConstant,
-        in: [self.bottomSheetPanMinTopConstant, defaultPadding, self.viewHeightExcludingSafeArea + bottomPadding]
+        in: [defaultPadding, self.viewHeightExcludingSafeArea + bottomPadding]
       )
 
-      if nearestValue == self.bottomSheetPanMinTopConstant { // bottomSheet이 safeAreaTop과 가장 가까운 경우
-        self.showBottomSheet(at: .expanded)
-      } else if nearestValue == defaultPadding { // bottomSheet이 viewHeightExcludingSafeArea에 가까운 경우
+      if nearestValue == defaultPadding { // bottomSheet이 초기 설정한 위치에 가까운 경우
         // bottom sheet을 normal상태로 보여주기
-        self.showBottomSheet(at: .normal)
+        self.showBottomSheet()
       } else { // bottomSheet이 view.bottom에 가까운 경우
         // bottom sheet을 숨기고 현재 viewController를 dismiss시키기
         self.hideBottomSheetAndDismiss()

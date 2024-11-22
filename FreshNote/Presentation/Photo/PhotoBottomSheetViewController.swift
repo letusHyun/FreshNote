@@ -41,7 +41,7 @@ final class PhotoBottomSheetViewController: UIViewController {
   }
   
   // MARK: - Private Helpers
-  private func setupLayout() {
+  func setupLayout() {
     let stackView: UIStackView = {
       let sv = UIStackView()
       sv.axis = .vertical
