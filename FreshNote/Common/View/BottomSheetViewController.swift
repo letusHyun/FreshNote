@@ -14,9 +14,40 @@ import SnapKit
 /// present의 animated도 false로 설정해야 합니다.
 class BottomSheetViewController: BaseViewController {
   // MARK: - Nested
-  enum BottomSheetViewState {
+  enum ViewState {
     case expanded
     case normal
+  }
+  
+  enum Detent {
+    /// * 0.9
+    case large
+    /// * 0.7
+    case smallLarge
+    /// * 0.5
+    case medium
+    /// * 0.25
+    case small
+    /// 0
+    case zero
+    case custom(CGFloat)
+    
+    func calculateHeight(baseView: UIView) -> CGFloat {
+      switch self {
+        case .large:
+        return baseView.frame.size.height * 0.9
+      case .smallLarge:
+        return baseView.frame.size.height * 0.7
+      case .medium:
+        return baseView.frame.size.height * 0.5
+      case .small:
+        return baseView.frame.size.height * 0.25
+      case .zero:
+        return .zero
+      case .custom(let height):
+        return height
+      }
+    }
   }
   
   // MARK: - Properties
@@ -63,7 +94,11 @@ class BottomSheetViewController: BaseViewController {
   
   private var subscriptions = Set<AnyCancellable>()
   
-  var bottomSheetHeight: CGFloat = 500
+  private var bottomSheetHeight: CGFloat {
+    self.detent.calculateHeight(baseView: self.view)
+  }
+  
+  private let detent: Detent
   
   private let dragIndicatorView: UIView = {
     let view = UIView()
@@ -74,17 +109,30 @@ class BottomSheetViewController: BaseViewController {
   }()
   
   // MARK: - LifeCycle
+  init(detent: Detent) {
+    self.detent = detent
+    super.init(nibName: nil, bundle: nil)
+  }
+  
+  @MainActor required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+  
+  
   override func viewDidLoad() {
     super.viewDidLoad()
     self.setupLayout()
     self.setupGestureRecognizers()
     self.setupStyle()
-//    self.setupChild()
   }
   
   override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
     self.showBottomSheet()
+  }
+  
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
   }
   
   // MARK: - setupUI
@@ -145,7 +193,7 @@ class BottomSheetViewController: BaseViewController {
     }
   }
   
-  private func showBottomSheet(at state: BottomSheetViewState = .normal) {
+  private func showBottomSheet(at state: ViewState = .normal) {
     if state == .normal {
       let height: CGFloat = self.view.safeAreaLayoutGuide.layoutFrame.height
       let bottomPadding: CGFloat = self.safeAreaBottomHeight

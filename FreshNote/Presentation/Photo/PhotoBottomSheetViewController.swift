@@ -36,28 +36,25 @@ final class PhotoBottomSheetViewController: UIViewController {
     setupLayout()
   }
   
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
+  }
+  
+  // MARK: - Private Helpers
   private func setupLayout() {
-    self.view.addSubview(self.albumButton)
-    self.view.addSubview(self.cameraButton)
-    self.view.addSubview(self.photoDeleteButton)
+    let stackView: UIStackView = {
+      let sv = UIStackView()
+      sv.axis = .vertical
+      sv.distribution = .fillEqually
+      sv.spacing = 2
+      sv.alignment = .fill
+      return sv
+    }()
+    _=[albumButton, cameraButton, photoDeleteButton].map { stackView.addArrangedSubview($0) }
+    self.view.addSubview(stackView)
     
-    self.albumButton.snp.makeConstraints {
-      $0.top.equalToSuperview().inset(30)
-      $0.leading.equalToSuperview().inset(10)
-      $0.width.height.equalTo(40)
-    }
-    
-    self.cameraButton.snp.makeConstraints {
-      $0.top.equalTo(self.albumButton.snp.bottom)
-      $0.leading.equalTo(self.albumButton)
-      $0.width.height.equalTo(albumButton)
-    }
-    
-    self.photoDeleteButton.snp.makeConstraints {
-      $0.top.equalTo(self.cameraButton.snp.bottom)
-      $0.leading.equalTo(self.albumButton)
-      $0.width.height.equalTo(40)
-      $0.bottom.equalToSuperview()
+    stackView.snp.makeConstraints {
+      $0.edges.equalToSuperview()
     }
   }
 }

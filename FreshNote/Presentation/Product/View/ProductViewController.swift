@@ -222,9 +222,10 @@ private extension ProductViewController {
         guard let self = self else { return }
         
         // TODO: - 해당 코드는 coordinator로 들어갈 예정
-        let bottomSheetViewController = BottomSheetViewController()
+        let photoBottomSheetVC = PhotoBottomSheetViewController()
+        let bottomSheetViewController = BottomSheetViewController(detent: .small)
         bottomSheetViewController.add(
-          child: PhotoBottomSheetViewController(),
+          child: photoBottomSheetVC,
           container: bottomSheetViewController.bottomSheetView
         )
         bottomSheetViewController.modalPresentationStyle = .overFullScreen
