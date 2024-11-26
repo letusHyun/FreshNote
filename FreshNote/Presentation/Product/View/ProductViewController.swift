@@ -8,6 +8,8 @@
 import Combine
 import UIKit
 
+import SnapKit
+
 final class ProductViewController: BaseViewController, KeyboardEventable {
   // MARK: - Properties
   private let viewModel: any ProductViewModel
@@ -27,12 +29,13 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   
   private let imageView: UIImageView = {
     let iv = UIImageView()
-    iv.contentMode = .scaleAspectFit
+    iv.contentMode = .scaleAspectFill
     iv.clipsToBounds = true
     iv.layer.cornerRadius = 8
     iv.layer.borderWidth = 2
     iv.layer.borderColor = UIColor(fnColor: .orange1).cgColor
     iv.image = UIImage(systemName: "camera")?.withInsets(.init(top: 28, left: 28, bottom: 28, right: 28))
+    iv.isUserInteractionEnabled = true
     return iv
   }()
   
@@ -55,21 +58,37 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   private let expirationTextField: PaddingTextField = {
     let tf = PaddingTextField()
     // TODO: - 현재 날자를 placeholder로 보여주는 알고리즘 작성하기
-    tf.placeholder = "24.12.31"
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy"
+    let yearString = dateFormatter.string(from: Date())
+    
+    tf.placeholder = String("ex)" + yearString.suffix(2) + ".01.01")
     tf.layer.cornerRadius = 8
     tf.layer.borderColor = UIColor(fnColor: .gray0).cgColor
     tf.layer.borderWidth = 1
+    tf.keyboardType = .numberPad
     return tf
   }()
   
   private let categoryTextField: PaddingTextField = {
     let tf = PaddingTextField()
-    tf.placeholder = "카테고리 입력창"
+    tf.placeholder = "카테고리를 지정해주세요."
     tf.layer.cornerRadius = 8
     tf.layer.borderColor = UIColor(fnColor: .gray0).cgColor
     tf.layer.borderWidth = 1
+    tf.inputView = UIView()
     return tf
   }()
+  
+  private let categoryToggleImageView: UIImageView = {
+    let iv = UIImageView(image: UIImage(systemName: "chevron.down")?.withTintColor(
+      UIColor(fnColor: .gray2),
+      renderingMode: .alwaysOriginal
+    ))
+    return iv
+  }()
+  
+  private var isCategoryToggleImageViewRotated: Bool = false
   
   private let descriptionTextView: PlaceholderTextView = {
     let tv = PlaceholderTextView()
@@ -92,37 +111,7 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   
   var transformView: UIView { self.view }
   
-  // TODO: - to erase
-  private let dummyStackview: UIStackView = {
-    let sv = UIStackView()
-    _=(0...2).map {
-      let lb = UILabel()
-      lb.text = "\($0)"
-      lb.textColor = .black
-      lb.font = .systemFont(ofSize: 20)
-      return lb
-    }.map {
-      sv.addArrangedSubview($0)
-    }
-    
-    sv.axis = .vertical
-    sv.alignment = .fill
-    sv.distribution = .fillEqually
-    return sv
-  }()
-  
-  private lazy var dummyTableView: UITableView = {
-    let tv = UITableView()
-    tv.register(UITableViewCell.self, forCellReuseIdentifier: "DummyCell")
-    tv.dataSource = self
-    tv.rowHeight = UITableView.automaticDimension
-    tv.estimatedRowHeight = 44
-    return tv
-  }()
-  
-  private let dummyModels: [Int] = {
-    return (0...20).map { $0 }
-  }()
+  private var expirationPreviousText = ""
   
   // MARK: - LifeCycle
   init(viewModel: any ProductViewModel) {
@@ -138,10 +127,9 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   override func viewDidLoad() {
     super.viewDidLoad()
     self.setupNavigationBar()
-    self.bind(to: self.viewModel)
+    self.bind()
     self.bindAction()
     self.bindKeyboard()
-    navigationController?.navigationBar.backgroundColor = .white
   }
   
   override func viewWillAppear(_ animated: Bool) {
@@ -199,17 +187,51 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
       self.descriptionTextView.trailingAnchor.constraint(equalTo: self.expirationTextField.trailingAnchor),
       self.descriptionTextView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -46)
     ])
+    
+    self.categoryTextField.addSubview(self.categoryToggleImageView)
+    self.categoryToggleImageView.snp.makeConstraints {
+      $0.trailing.equalToSuperview().inset(15.5)
+      $0.size.equalTo(24)
+      $0.centerY.equalToSuperview()
+    }
   }
 }
 
 private extension ProductViewController {
   // MARK: - Bind
-  func bind(to viewModel: any ProductViewModel) {
+  private func bind() {
+    self.viewModel.categoryToggleAnimationPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
+        self?.animateCategoryToggleImageView()
+      }
+      .store(in: &self.subscriptions)
     
+    self.viewModel.categoryPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
+        self?.categoryTextField.text = $0
+      }
+      .store(in: &self.subscriptions)
+    
+    self.viewModel.imageDataPublisher
+      .receive(on: DispatchQueue.main)
+      .compactMap { $0 }
+      .sink { [weak self] data in
+        self?.imageView.image = UIImage(data: data)
+      }
+      .store(in: &self.subscriptions)
   }
   
   // MARK: - Actions
-  func bindAction() {
+  private func bindAction() {
+    self.expirationTextField.publisher(for: .editingChanged)
+      .receive(on: DispatchQueue.main)
+      .sink { _ in
+        self.configureExpirationText(self.expirationTextField.text)
+      }
+      .store(in: &self.subscriptions)
+    
     self.backButton.publisher(for: .touchUpInside)
       .sink { [weak self] _ in
         self?.viewModel.didTapBackButton()
@@ -218,18 +240,22 @@ private extension ProductViewController {
     
     self.saveButton.publisher(for: .touchUpInside)
       .sink { [weak self] _ in
-//        self?.viewModel.didTapSaveButton()
-        guard let self = self else { return }
-        
-        // TODO: - 해당 코드는 coordinator로 들어갈 예정
-        let photoBottomSheetVC = PhotoBottomSheetViewController()
-        let bottomSheetViewController = BottomSheetViewController(detent: .small)
-        bottomSheetViewController.add(
-          child: photoBottomSheetVC,
-          container: bottomSheetViewController.bottomSheetView
-        )
-        bottomSheetViewController.modalPresentationStyle = .overFullScreen
-        self.present(bottomSheetViewController, animated: false)
+        self?.viewModel.didTapSaveButton()
+      }
+      .store(in: &self.subscriptions)
+    
+    self.imageView.publisher(for: UITapGestureRecognizer())
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.viewModel.didTapImageView()
+      }
+      .store(in: &self.subscriptions)
+    
+    self.categoryTextField.publisher(for: UITapGestureRecognizer())
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.animateCategoryToggleImageView()
+        self?.viewModel.didTapCategoryTextField()
       }
       .store(in: &self.subscriptions)
   }
@@ -241,16 +267,41 @@ extension ProductViewController {
     self.navigationItem.rightBarButtonItem = UIBarButtonItem(customView: self.saveButton)
     self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: self.backButton)
   }
-}
-
-extension ProductViewController: UITableViewDataSource {
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    dummyModels.count
+  
+  private func animateCategoryToggleImageView() {
+    UIView.animate(withDuration: 0.3) {
+      let transform = self.isCategoryToggleImageViewRotated ? .identity : CGAffineTransform(rotationAngle: .pi)
+      self.categoryToggleImageView.transform = transform
+      self.isCategoryToggleImageViewRotated.toggle()
+    }
   }
   
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    guard let cell = tableView.dequeueReusableCell(withIdentifier: "DummyCell", for: indexPath) as? DummyCell else { return UITableViewCell() }
-    cell.configure(text: String(dummyModels[indexPath.row]))
-    return cell
+  private func configureExpirationText(_ text: String?) {
+    guard let text = text else { return }
+    // 숫자만 포함
+    let numbers = text.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+    
+    let isDeleting = self.expirationPreviousText.count > text.count
+    
+    var formattedText = ""
+    for (index, number) in numbers.enumerated() {
+      if index == 1 { // YY
+        formattedText += String(number) + "."
+      } else if index == 3 { // MM
+        formattedText += String(number) + "."
+      } else { // DD
+        formattedText += String(number)
+      }
+      
+      // 최대 6자리(YY.MM.DD)
+      if index == 5 { break }
+    }
+    
+    if isDeleting, self.expirationPreviousText.last == "." {
+      formattedText = String(formattedText.dropLast())
+    }
+    
+    self.expirationTextField.text = formattedText
+    self.expirationPreviousText = formattedText
   }
 }

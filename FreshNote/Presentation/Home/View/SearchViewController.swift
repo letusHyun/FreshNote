@@ -40,7 +40,7 @@ final class SearchViewController: BaseViewController {
     let btn = UIButton()
     btn.setTitle("취소", for: .normal)
     btn.titleLabel?.font = UIFont.pretendard(size: 15, weight: ._400)
-    btn.setTitleColor(UIColor(fnColor: .gray), for: .normal)
+    btn.setTitleColor(UIColor(fnColor: .gray2), for: .normal)
     return btn
   }()
   
@@ -121,7 +121,7 @@ extension SearchViewController {
     let lb = UILabel()
     lb.font = UIFont.pretendard(size: 12, weight: ._400)
     lb.text = "최근 검색어"
-    lb.textColor = UIColor(fnColor: .gray)
+    lb.textColor = UIColor(fnColor: .gray2)
     return lb
   }
   

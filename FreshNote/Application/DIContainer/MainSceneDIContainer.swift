@@ -43,6 +43,14 @@ private extension MainSceneDIContainer {
   func makeProductViewModel(actions: ProductViewModelActions, mode: ProductViewModelMode) -> any ProductViewModel {
     return DefaultProductViewModel(actions: actions, mode: mode)
   }
+  
+  func makePhotoBottomSheetViewModel(actions: PhotoBottomSheetViewModelActions) -> any PhotoBottomSheetViewModel {
+    return DefaultPhotoBottomSheetViewModel(actions: actions)
+  }
+  
+  func makeCategoryBottomSheetViewModel(actions: CategoryBottomSheetViewModelActions) -> any CategoryBottomSheetViewModel {
+    return DefaultCategoryBottomSheetViewModel(actions: actions)
+  }
 }
 
 // MARK: - MainCoordinatorDependencies
@@ -104,6 +112,20 @@ extension MainSceneDIContainer: SearchCoordinatorDependencies {
 }
 
 extension MainSceneDIContainer: ProductCoordinatorDependencies {
+  func makeCategoryBottomSheetViewController(actions: CategoryBottomSheetViewModelActions) -> UIViewController {
+    return CategoryBottomSheetViewController(viewModel: self.makeCategoryBottomSheetViewModel(actions: actions))
+  }
+  
+  func makeBottomSheetViewController(
+    detent: BottomSheetViewController.Detent
+  ) -> BottomSheetViewController {
+    return BottomSheetViewController(detent: detent)
+  }
+  
+  func makePhotoBottomSheetViewController(actions: PhotoBottomSheetViewModelActions) -> UIViewController {
+    return PhotoBottomSheetViewController(viewModel: self.makePhotoBottomSheetViewModel(actions: actions))
+  }
+  
   func makeProductViewController(
     actions: ProductViewModelActions,
     mode: ProductViewModelMode

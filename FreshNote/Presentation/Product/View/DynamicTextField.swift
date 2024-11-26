@@ -53,19 +53,15 @@ final class DynamicTextField: UITextField {
   override func layoutSubviews() {
     super.layoutSubviews()
     
-    let shouldUpdateDashedBorder = self.previousWidth != bounds.width
+    let shouldUpdateDashedBorder = self.previousWidth != self.bounds.width
     
     if shouldUpdateDashedBorder {
-      self.previousWidth = bounds.width
+      self.previousWidth = self.bounds.width
       self.updateDashedBorder()
     }
   }
   
-  // MARK: - Private Helpers
-  private func setupToolbar() {
-    self.inputAccessoryView = self.keyboardToolbar
-  }
-  
+  // MARK: - SetupUI
   private func setupLayout() {
     self.layer.addSublayer(self.dashLayer)
     self.addSubview(self.pencilImageView)
@@ -91,6 +87,11 @@ final class DynamicTextField: UITextField {
     self.dashLayer.lineWidth = 1
     self.dashLayer.fillColor = nil
     self.dashLayer.lineDashPattern = [2, 2]
+  }
+  
+  // MARK: - Private Helpers
+  private func setupToolbar() {
+    self.inputAccessoryView = self.keyboardToolbar
   }
   
   private func bind() {
@@ -119,13 +120,13 @@ final class DynamicTextField: UITextField {
   }
   
   private func updateDashedBorder() {
-    bezierPath.removeAllPoints()
+    self.bezierPath.removeAllPoints()
     
     let destinationHeight = self.bounds.height - self.borderHeight + 4
-    bezierPath.move(to: CGPoint(x: .zero, y: destinationHeight))
-    bezierPath.addLine(to: CGPoint(x: self.bounds.width, y: destinationHeight))
+    self.bezierPath.move(to: CGPoint(x: .zero, y: destinationHeight))
+    self.bezierPath.addLine(to: CGPoint(x: self.bounds.width, y: destinationHeight))
     
-    self.dashLayer.path = bezierPath.cgPath
+    self.dashLayer.path = self.bezierPath.cgPath
   }
 }
 

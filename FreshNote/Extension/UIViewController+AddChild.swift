@@ -13,12 +13,11 @@ extension UIViewController {
   func add(child: UIViewController, container: UIView) {
     self.addChild(child)
     container.addSubview(child.view)
+    child.didMove(toParent: self)
     
     child.view.snp.makeConstraints {
       $0.edges.equalToSuperview()
     }
-    
-    child.didMove(toParent: self)
   }
   
   /// childVC에서 remove 호출

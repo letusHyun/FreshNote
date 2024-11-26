@@ -38,7 +38,7 @@ final class DateTimeSettingViewController: BaseViewController {
     textField.font = .pretendard(size: Constants.dateSize, weight: ._400)
     textField.keyboardType = .numberPad
     textField.delegate = self
-    textField.setPlaceholderColor(UIColor(fnColor: .gray))
+    textField.setPlaceholderColor(UIColor(fnColor: .gray2))
     return textField
   }()
   

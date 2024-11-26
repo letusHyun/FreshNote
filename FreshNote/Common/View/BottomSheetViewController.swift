@@ -50,16 +50,6 @@ class BottomSheetViewController: BaseViewController {
     self.view.safeAreaLayoutGuide.layoutFrame.height
   }
   
-  private var safeAreaBottomHeight: CGFloat {
-    if let window = self.view.window ?? UIApplication.shared.connectedScenes
-      .compactMap({ $0 as? UIWindowScene })
-      .flatMap({ $0.windows })
-      .first(where: { $0.isKeyWindow }) {
-      return window.safeAreaInsets.bottom
-    }
-    return 0
-  }
-  
   /// 드래그 하기 전에 bottom sheet의 top constraint value를 지정하기 위한 프로퍼티
   private var bottomSheetPanStartingTopConstraintConstant: CGFloat?
   
@@ -100,9 +90,12 @@ class BottomSheetViewController: BaseViewController {
     return view
   }()
   
+  var dismissHandler: (() -> Void)?
+  
   // MARK: - LifeCycle
   init(detent: Detent) {
     self.detent = detent
+    
     super.init(nibName: nil, bundle: nil)
   }
   
@@ -146,7 +139,7 @@ class BottomSheetViewController: BaseViewController {
       $0.bottom.equalToSuperview()
       
       let topConstant = self.safeAreaBottomHeight + self.view.safeAreaLayoutGuide.layoutFrame.height
-      self.bottomSheetViewTopConstraint = $0.top.equalTo(self.view.safeAreaLayoutGuide).offset(topConstant).constraint
+      self.bottomSheetViewTopConstraint = $0.top.equalTo(self.view.safeAreaLayoutGuide).inset(topConstant).constraint
     }
     
     self.dragIndicatorView.snp.makeConstraints {
@@ -166,22 +159,6 @@ class BottomSheetViewController: BaseViewController {
     
     let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dimmedViewTapped(_:)))
     self.dimmedView.addGestureRecognizer(tapGestureRecognizer)
-  }
-  
-  private func hideBottomSheetAndDismiss() {
-    let safeAreaHeight = self.view.safeAreaLayoutGuide.layoutFrame.height
-    let bottomPadding = self.safeAreaBottomHeight
-    
-    self.bottomSheetViewTopConstraint?.update(offset: safeAreaHeight + bottomPadding)
-    
-    UIView.animate(withDuration: 0.25, delay: .zero, options: .curveEaseIn, animations: {
-      let hiddenAlpha: CGFloat = 0
-      self.dimmedView.alpha = hiddenAlpha
-      self.dragIndicatorView.alpha = hiddenAlpha
-      self.view.layoutIfNeeded()
-    }) { _ in
-      self.dismiss(animated: false)
-    }
   }
   
   private func showBottomSheet() {
@@ -247,7 +224,6 @@ class BottomSheetViewController: BaseViewController {
       )
 
       if nearestValue == defaultPadding { // bottomSheet이 초기 설정한 위치에 가까운 경우
-        // bottom sheet을 normal상태로 보여주기
         self.showBottomSheet()
       } else { // bottomSheet이 view.bottom에 가까운 경우
         // bottom sheet을 숨기고 현재 viewController를 dismiss시키기
@@ -255,6 +231,23 @@ class BottomSheetViewController: BaseViewController {
       }
     default:
       break
+    }
+  }
+  
+  // MARK: - Helpers
+  func hideBottomSheetAndDismiss() {
+    let safeAreaHeight = self.view.safeAreaLayoutGuide.layoutFrame.height
+    let bottomPadding = self.safeAreaBottomHeight
+    
+    self.bottomSheetViewTopConstraint?.update(offset: safeAreaHeight + bottomPadding)
+    
+    UIView.animate(withDuration: 0.25, delay: .zero, options: .curveEaseIn, animations: {
+      let hiddenAlpha: CGFloat = 0
+      self.dimmedView.alpha = hiddenAlpha
+      self.dragIndicatorView.alpha = hiddenAlpha
+      self.view.layoutIfNeeded()
+    }) { _ in
+      self.dismissHandler?()
     }
   }
 }
