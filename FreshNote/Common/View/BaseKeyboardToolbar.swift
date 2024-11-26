@@ -8,7 +8,7 @@
 import Combine
 import UIKit
 
-class BaseKeyboardToolbar: UIToolbar {
+final class BaseKeyboardToolbar: UIToolbar {
   // MARK: - Properties
   var tapPublisher: AnyPublisher<Void, Never> { self.tapSubject.eraseToAnyPublisher() }
   
