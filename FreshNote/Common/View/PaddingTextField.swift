@@ -15,6 +15,10 @@ class PaddingTextField: UITextField {
   
   private var subscriptions = Set<AnyCancellable>()
   
+  var doneTapPublisher: AnyPublisher<Void, Never> {
+    self.keyboardToolbar.tapPublisher.eraseToAnyPublisher()
+  }
+  
   // MARK: - LifeCycle
   init(leftPadding: CGFloat = 25) {
     super.init(frame: .zero)

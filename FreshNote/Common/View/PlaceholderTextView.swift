@@ -46,6 +46,10 @@ final class PlaceholderTextView: UITextView {
   
   private let keyboardToolbar = BaseKeyboardToolbar()
   
+  var doneTapPublisher: AnyPublisher<Void, Never> {
+    self.keyboardToolbar.tapPublisher.eraseToAnyPublisher()
+  }
+  
   // MARK: - LifeCycle
   convenience init() {
     self.init(frame: .zero, textContainer: nil)
