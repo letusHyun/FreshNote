@@ -10,6 +10,7 @@ import UIKit
 
 final class BaseKeyboardToolbar: UIToolbar {
   // MARK: - Properties
+  /// 키보드 완료 버튼 tap 방출 Publisher입니다.
   var tapPublisher: AnyPublisher<Void, Never> { self.tapSubject.eraseToAnyPublisher() }
   
   private let tapSubject: PassthroughSubject<Void, Never> = .init()

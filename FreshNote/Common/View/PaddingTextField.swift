@@ -15,6 +15,7 @@ class PaddingTextField: UITextField {
   
   private var subscriptions = Set<AnyCancellable>()
   
+  /// 키보드 완료 버튼 tap 방출 Publisher입니다.
   var doneTapPublisher: AnyPublisher<Void, Never> {
     self.keyboardToolbar.tapPublisher.eraseToAnyPublisher()
   }
