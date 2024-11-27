@@ -11,6 +11,10 @@ import UIKit
 import SnapKit
 
 final class ProductViewController: BaseViewController, KeyboardEventable {
+  enum Constant {
+    static var pointString: Character { return "." }
+  }
+  
   // MARK: - Properties
   private let viewModel: any ProductViewModel
   
@@ -20,7 +24,7 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   
   private let titleTextField: DynamicTextField = {
     let tf = DynamicTextField(borderColor: UIColor(fnColor: .gray3), widthConstant: 100)
-    tf.textColor = UIColor(fnColor: .gray1)
+    tf.textColor = .black
     tf.textAlignment = .center
     tf.font = UIFont.pretendard(size: 16, weight: ._500)
     tf.placeholder = "음식 이름"
@@ -103,15 +107,18 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   
   private let saveButton: UIButton = {
     let btn = UIButton()
-    btn.setTitle("완료", for: .normal)
-    btn.setTitleColor(UIColor(fnColor: .gray3), for: .normal)
+    btn.setTitle("저장", for: .normal)
+    btn.setTitleColor(UIColor(fnColor: .gray0), for: .normal)
     btn.titleLabel?.font = UIFont.pretendard(size: 20, weight: ._600)
+    btn.isEnabled = false
     return btn
   }()
   
   var transformView: UIView { self.view }
   
   private var expirationPreviousText = ""
+  
+  private let categoryTextSubject = PassthroughSubject<String, Never>()
   
   // MARK: - LifeCycle
   init(viewModel: any ProductViewModel) {
@@ -211,6 +218,7 @@ private extension ProductViewController {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
         self?.categoryTextField.text = $0
+        self?.categoryTextSubject.send($0)
       }
       .store(in: &self.subscriptions)
     
@@ -221,14 +229,46 @@ private extension ProductViewController {
         self?.imageView.image = UIImage(data: data)
       }
       .store(in: &self.subscriptions)
+    
+    self.viewModel.dateValidationPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] isValid in
+        if !isValid {
+          print("유효하지 않음!")
+        } else { print("유효함~~") }
+      }
+      .store(in: &self.subscriptions)
   }
   
   // MARK: - Actions
   private func bindAction() {
+    self.expirationTextField.doneTapPublisher
+      .sink { [weak self] _ in
+//        self?.viewModel.didTapKeyboardDoneButton(dateString: self?.expirationTextField.text)
+      }
+      .store(in: &self.subscriptions)
+    
+    Publishers.CombineLatest3(
+      self.titleTextField.textDidChangedPublisher,
+      self.expirationTextField.textDidChangedPublisher,
+      self.categoryTextSubject
+    )
+    .map { !$0.isEmpty && !$1.isEmpty && !$2.isEmpty }
+    .sink { [weak self] isValid in
+      self?.saveButton.isEnabled = isValid
+      if isValid {
+        self?.saveButton.setTitleColor(UIColor(fnColor: .gray3), for: .normal)
+      } else {
+        self?.saveButton.setTitleColor(UIColor(fnColor: .gray0), for: .normal)
+      }
+    }
+    .store(in: &self.subscriptions)
+    
     self.expirationTextField.publisher(for: .editingChanged)
       .receive(on: DispatchQueue.main)
-      .sink { _ in
-        self.configureExpirationText(self.expirationTextField.text)
+      .sink { [weak self] _ in
+        self?.configureExpirationText(self?.expirationTextField.text)
+        self?.viewModel.didTapKeyboardDoneButton(dateString: self?.expirationTextField.text)
       }
       .store(in: &self.subscriptions)
     
@@ -286,9 +326,9 @@ extension ProductViewController {
     var formattedText = ""
     for (index, number) in numbers.enumerated() {
       if index == 1 { // YY
-        formattedText += String(number) + "."
+        formattedText += String(number) + String(Constant.pointString)
       } else if index == 3 { // MM
-        formattedText += String(number) + "."
+        formattedText += String(number) + String(Constant.pointString)
       } else { // DD
         formattedText += String(number)
       }
@@ -297,11 +337,21 @@ extension ProductViewController {
       if index == 5 { break }
     }
     
-    if isDeleting, self.expirationPreviousText.last == "." {
+    if isDeleting, self.expirationPreviousText.last == Constant.pointString {
       formattedText = String(formattedText.dropLast())
     }
     
     self.expirationTextField.text = formattedText
     self.expirationPreviousText = formattedText
   }
+  
+//  private func updateDayString() {
+//    if self.expirationTextField.text?.count == 7, self.expirationTextField.text?.last != "0" {
+//      guard var text = self.expirationTextField.text else { return }
+//      
+//      let index = text.index(text.startIndex, offsetBy: 6)
+//      text.insert("0", at: index)
+//      self.expirationTextField.text = text
+//    }
+//  }
 }
