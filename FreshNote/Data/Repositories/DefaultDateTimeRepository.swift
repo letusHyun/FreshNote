@@ -17,7 +17,7 @@ final class DefaultDateTimeRepository: DateTimeRepository {
   }
   
   func fetchDateTime(userID: String) -> AnyPublisher<Alarm, any Error> {
-    let publisher: AnyPublisher<AlarmDTO, any Error> = service.getDocument(
+    let publisher: AnyPublisher<AlarmResponseDTO, any Error> = service.getDocument(
       documentPath: FirestorePath.userID(userID: userID)
     )
     
@@ -29,7 +29,7 @@ final class DefaultDateTimeRepository: DateTimeRepository {
     guard let userID = FirebaseUserManager.shared.userID
     else { return Fail(error: FirestoreServiceError.noUser).eraseToAnyPublisher() }
     
-    let requestDTO = AlarmDTO(date: date, hour: hour, minute: minute)
+    let requestDTO = AlarmRequestDTO(date: date, hour: hour, minute: minute)
     return service.setDocument(
       documentPath: FirestorePath.userID(userID: userID),
       requestDTO: requestDTO,

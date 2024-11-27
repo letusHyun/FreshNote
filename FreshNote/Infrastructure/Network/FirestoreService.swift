@@ -13,28 +13,29 @@ import FirebaseFirestore
 enum FirestoreServiceError: Error {
   case invalidData
   case noUser
+  case encodingError
 }
 
 protocol FirestoreService {
-  func getDocument<T: DTOable>(documentPath: String) -> AnyPublisher<T, any Error>
+  func getDocument<T: Decodable>(documentPath: String) -> AnyPublisher<T, any Error>
 //  func getDocuments(documentPath: String, conditions: [String: Any]) -> AnyPublisher<[[String: Any]], any Error>
-  func setDocument<T: DTOable>(documentPath: String, requestDTO: T, merge: Bool) -> AnyPublisher<Void, any Error>
+  func setDocument<T: Encodable>(documentPath: String, requestDTO: T, merge: Bool) -> AnyPublisher<Void, any Error>
 }
 
 final class DefaultFirestoreService: FirestoreService {
   private let firestore = Firestore.firestore()
   
-  func getDocument<T>(documentPath: String) -> AnyPublisher<T, any Error> where T : DTOable {
-    getDocument(documentPath: documentPath)
-      .tryMap { dictionary in
-        guard let decoded = T(dictionary: dictionary) else {
-          throw FirestoreServiceError.invalidData
-        }
-        
-        return decoded
-      }
-      .eraseToAnyPublisher()
-  }
+//  func getDocument<T>(documentPath: String) -> AnyPublisher<T, any Error> where T : Decodable {
+//    getDocument(documentPath: documentPath)
+//      .tryMap { dictionary in
+//        guard let decoded = T(dictionary: dictionary) else {
+//          throw FirestoreServiceError.invalidData
+//        }
+//        
+//        return decoded
+//      }
+//      .eraseToAnyPublisher()
+//  }
   
 //  func getDocuments(
 //    documentPath: String,
@@ -48,18 +49,22 @@ final class DefaultFirestoreService: FirestoreService {
 //      
 //  }
   
-  func setDocument<T>(
+  func setDocument<T: Encodable>(
     documentPath: String,
     requestDTO: T,
     merge: Bool
-  ) -> AnyPublisher<Void, any Error> where T : DTOable {
-    let dictionary = requestDTO.dictionary
-    
+  ) -> AnyPublisher<Void, any Error> {
     return Future { [weak self] promise in
+      guard let dictionary = try? requestDTO.toDictionary() else {
+        return promise(.failure(FirestoreServiceError.encodingError))
+      }
+      
       self?.firestore.document(documentPath)
         .setData(dictionary, merge: merge) { error in
-          if let error = error { return promise(.failure(error)) }
-          return promise(.success(()))
+          if let error = error {
+            promise(.failure(error))
+          }
+          promise(.success(()))
         }
     }
     .eraseToAnyPublisher()
@@ -68,14 +73,22 @@ final class DefaultFirestoreService: FirestoreService {
 
 // MARK: - Private Helpers
 extension DefaultFirestoreService {
-  private func getDocument(documentPath: String) -> AnyPublisher<[String: Any], any Error> {
+  func getDocument<T: Decodable>(documentPath: String) -> AnyPublisher<T, any Error> {
     return Future { [weak self] promise in
-      self?.firestore.document(documentPath).getDocument { snapshot, error in
-        if let error = error { return promise(.failure(error)) }
+      self?.firestore.document(documentPath).getDocument { (snapshot, error) in
+        if let error = error {
+          promise(.failure(error))
+        }
         
         guard let dictionary = snapshot?.data() else { return promise(.failure(FirestoreServiceError.invalidData)) }
         
-        return promise(.success(dictionary))
+        do {
+          let data = try JSONSerialization.data(withJSONObject: dictionary)
+          let decodedDate = try JSONDecoder().decode(T.self, from: data)
+          promise(.success(decodedDate))
+        } catch {
+          promise(.failure(error))
+        }
       }
     }
     .eraseToAnyPublisher()
