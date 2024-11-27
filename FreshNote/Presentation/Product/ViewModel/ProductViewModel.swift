@@ -26,12 +26,14 @@ protocol ProductViewModelInput {
   func didTapSaveButton()
   func didTapImageView()
   func didTapCategoryTextField()
+  func didTapKeyboardDoneButton(dateString: String?)
 }
 
 protocol ProductViewModelOutput {
   var categoryToggleAnimationPublisher: AnyPublisher<Void, Never> { get }
   var imageDataPublisher: AnyPublisher<Data?, Never> { get }
   var categoryPublisher: AnyPublisher<String, Never> { get }
+  var dateValidationPublisher: AnyPublisher<Bool, Never> { get }
 }
 
 enum ProductViewModelMode {
@@ -51,20 +53,14 @@ final class DefaultProductViewModel: ProductViewModel {
   var categoryToggleAnimationPublisher: AnyPublisher<Void, Never> {
     self.categoryToggleAnimationSubject.eraseToAnyPublisher()
   }
+  var imageDataPublisher: AnyPublisher<Data?, Never> { self.imageDataSubject.eraseToAnyPublisher() }
+  var categoryPublisher: AnyPublisher<String, Never> { self.categorySubject.eraseToAnyPublisher() }
+  var dateValidationPublisher: AnyPublisher<Bool, Never> { self.dateValidationSubject.eraseToAnyPublisher() }
   
   private let categoryToggleAnimationSubject: PassthroughSubject<Void, Never> = .init()
-  
-  var imageDataPublisher: AnyPublisher<Data?, Never> {
-    self.imageDataSubject.eraseToAnyPublisher()
-  }
-  
   private let imageDataSubject: PassthroughSubject<Data?, Never> = .init()
-  
-  var categoryPublisher: AnyPublisher<String, Never> {
-    self.categorySubject.eraseToAnyPublisher()
-  }
-  
   private let categorySubject: PassthroughSubject<String, Never> = .init()
+  private let dateValidationSubject: PassthroughSubject<Bool, Never> = .init()
   
   // MARK: - LifeCycle
   init(actions: ProductViewModelActions, mode: ProductViewModelMode) {
@@ -83,8 +79,8 @@ final class DefaultProductViewModel: ProductViewModel {
   
   func didTapSaveButton() {
     // 네트워크 save 요청 후
-      // 성공 시 pop
-      // 실패 시 return
+    // 성공 시 pop
+    // 실패 시 return
   }
   
   func didTapImageView() {
@@ -100,7 +96,55 @@ final class DefaultProductViewModel: ProductViewModel {
     let passCategoryHandler: ProductViewModelActions.PassCategoryHandler = { [weak self] category in
       self?.categorySubject.send(category)
     }
-
+    
     self.actions.showCategoryBottomSheet(animateCategoryHandler, passCategoryHandler)
+  }
+  
+  func didTapKeyboardDoneButton(dateString: String?) {
+    guard var dateString else { return }
+    self.validateDate(with: dateString)
+  }
+  
+  // MARK: - Private Helpers
+  func validateDate(with dateString: String) {
+    // 1. 형식 검사 (YY.MM.DD)
+    let components = dateString.components(separatedBy: ".")
+    let yearStr = components[0]
+    let monthStr = components[1]
+    let dayStr = components[2]
+    
+    guard components.count == 3,
+          let year = Int("20" + yearStr),
+          let month = Int(monthStr),
+          let day = Int(dayStr)
+    else {
+      self.dateValidationSubject.send(false)
+      return
+    }
+    
+    // 2. 월 검사 (1-12)
+    guard (1...12).contains(month)
+    else {
+      self.dateValidationSubject.send(false)
+      return
+    }
+    
+    // 3. 해당 월의 마지막 날짜 계산
+    var dateComponents = DateComponents()
+    dateComponents.year = year
+    dateComponents.month = month
+    dateComponents.day = 1
+    
+    let calendar = Calendar.current
+    guard let date = calendar.date(from: dateComponents),
+          let range = calendar.range(of: .day, in: .month, for: date)
+    else {
+      self.dateValidationSubject.send(false)
+      return
+    }
+    
+    // 4. 일자 검사
+    let isValid = (1...range.count).contains(day)
+    self.dateValidationSubject.send(isValid)
   }
 }
