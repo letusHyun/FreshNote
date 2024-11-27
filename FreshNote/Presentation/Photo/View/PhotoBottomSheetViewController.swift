@@ -103,12 +103,19 @@ final class PhotoBottomSheetViewController: UIViewController {
     
     _=[self.albumButton, self.cameraButton, self.deleteButton].map { stackView.addArrangedSubview($0) }
     
+    let buttonHeight: CGFloat = 48
+    
+    albumButton.snp.makeConstraints {
+      $0.height.equalTo(buttonHeight)
+    }
+    
     self.view.addSubview(stackView)
     
     stackView.snp.makeConstraints {
       $0.top.equalToSuperview().inset(20)
       $0.leading.trailing.equalToSuperview().inset(16.5)
       $0.bottom.equalToSuperview().inset(14)
+      $0.height.equalTo(buttonHeight * 3)
     }
   }
 }
