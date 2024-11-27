@@ -8,14 +8,14 @@
 import Combine
 import Foundation
 
-protocol SaveProductUseCase: AnyObject {
-  func execute() -> AnyPublisher<Void, Never>()
-}
-
-final class SaveProductUseCase: SaveProductUseCase {
-  private let productRepository: any ProductRepository
-  
-  func execute() -> AnyPublisher<Void, Never> {
-    
-  }
-}
+//protocol SaveProductUseCase: AnyObject {
+//  func execute() -> AnyPublisher<Void, Never>()
+//}
+//
+//final class SaveProductUseCase: SaveProductUseCase {
+//  private let productRepository: any ProductRepository
+//  
+//  func execute() -> AnyPublisher<Void, Never> {
+//    
+//  }
+//}

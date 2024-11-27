@@ -9,5 +9,5 @@ import Combine
 import Foundation
 
 protocol ProductRepository {
-  func saveProduct() -> AnyPublisher<Void, Never>()
+  func saveProduct() -> AnyPublisher<Void, Never>
 }

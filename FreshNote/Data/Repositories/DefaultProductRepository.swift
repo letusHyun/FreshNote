@@ -8,14 +8,14 @@
 import Combine
 import Foundation
 
-final class DefaultProductRepository: ProductRepository {
-  private let service: any FirestoreService
-  
-  init(service: any FirestoreService) {
-    self.service = service
-  }
-  
-  func saveProduct(with product: Product) -> AnyPublisher<Void, Never> {
-    
-  }
-}
+//final class DefaultProductRepository: ProductRepository {
+//  private let service: any FirestoreService
+//  
+//  init(service: any FirestoreService) {
+//    self.service = service
+//  }
+//  
+//  func saveProduct(with product: Product) -> AnyPublisher<Void, Never> {
+//    
+//  }
+//}
