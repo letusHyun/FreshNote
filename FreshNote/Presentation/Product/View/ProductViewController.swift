@@ -43,11 +43,19 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
     return iv
   }()
   
-  private let expirationLabel: UILabel = {
+  private let expiration: UILabel = {
     let lb = UILabel()
     lb.text = "유통기한"
     lb.font = UIFont.pretendard(size: 12, weight: ._500)
     lb.textColor = .black
+    return lb
+  }()
+  
+  private let expirationWarningLabel: UILabel = {
+    let lb = UILabel()
+    lb.font = UIFont.pretendard(size: 12, weight: ._500)
+    lb.textColor = .red
+    lb.isHidden = true
     return lb
   }()
   
@@ -59,7 +67,7 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
     return lb
   }()
   
-  private let expirationTextField: PaddingTextField = {
+  private lazy var expirationTextField: PaddingTextField = {
     let tf = PaddingTextField()
     // TODO: - 현재 날자를 placeholder로 보여주는 알고리즘 작성하기
     let dateFormatter = DateFormatter()
@@ -71,6 +79,7 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
     tf.layer.borderColor = UIColor(fnColor: .gray0).cgColor
     tf.layer.borderWidth = 1
     tf.keyboardType = .numberPad
+    tf.delegate = self
     return tf
   }()
   
@@ -118,8 +127,6 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   
   private var expirationPreviousText = ""
   
-  private let categoryTextSubject = PassthroughSubject<String, Never>()
-  
   // MARK: - LifeCycle
   init(viewModel: any ProductViewModel) {
     self.viewModel = viewModel
@@ -153,7 +160,8 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
   override func setupLayout() {
     _=[self.titleTextField,
        self.imageView,
-       self.expirationLabel,
+       self.expiration,
+       self.expirationWarningLabel,
        self.expirationTextField,
        self.categoryLabel,
        self.categoryTextField,
@@ -173,16 +181,26 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
       self.imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor),
       self.imageView.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
       
-      self.expirationLabel.topAnchor.constraint(equalTo: self.imageView.bottomAnchor, constant: 45),
-      self.expirationLabel.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 18),
+      self.expiration.topAnchor.constraint(equalTo: self.imageView.bottomAnchor, constant: 45),
+      self.expiration.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 18),
       
-      self.expirationTextField.topAnchor.constraint(equalTo: self.expirationLabel.bottomAnchor, constant: 10),
+      self.expirationWarningLabel.centerYAnchor.constraint(equalTo: self.expiration.centerYAnchor),
+      self.expirationWarningLabel.leadingAnchor.constraint(
+        equalTo: self.expiration.trailingAnchor,
+        constant: 10
+      ),
+      self.expirationWarningLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: self.view.trailingAnchor,
+        constant: -40
+      ),
+      
+      self.expirationTextField.topAnchor.constraint(equalTo: self.expiration.bottomAnchor, constant: 10),
       self.expirationTextField.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 16.5),
       self.expirationTextField.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -16.5),
       self.expirationTextField.heightAnchor.constraint(equalToConstant: 58),
       
       self.categoryLabel.topAnchor.constraint(equalTo: self.expirationTextField.bottomAnchor, constant: 10),
-      self.categoryLabel.leadingAnchor.constraint(equalTo: self.expirationLabel.leadingAnchor),
+      self.categoryLabel.leadingAnchor.constraint(equalTo: self.expiration.leadingAnchor),
       
       self.categoryTextField.topAnchor.constraint(equalTo: self.categoryLabel.bottomAnchor, constant: 10),
       self.categoryTextField.leadingAnchor.constraint(equalTo: self.expirationTextField.leadingAnchor),
@@ -218,7 +236,6 @@ private extension ProductViewController {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
         self?.categoryTextField.text = $0
-        self?.categoryTextSubject.send($0)
       }
       .store(in: &self.subscriptions)
     
@@ -230,30 +247,35 @@ private extension ProductViewController {
       }
       .store(in: &self.subscriptions)
     
-    self.viewModel.dateValidationPublisher
+    self.viewModel.expirationPublisher
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] isValid in
-        if !isValid {
-          print("유효하지 않음!")
-        } else { print("유효함~~") }
+      .sink { state in
+        switch state {
+        case .inCompleteDate(let text):
+          self.expirationWarningLabel.text = text
+          self.expirationWarningLabel.isHidden = false
+        case .invalidDate(let text):
+          self.expirationWarningLabel.text = text
+          self.expirationWarningLabel.isHidden = false
+        case .completeDate:
+          self.expirationWarningLabel.isHidden = true
+        }
       }
       .store(in: &self.subscriptions)
   }
   
   // MARK: - Actions
   private func bindAction() {
-    self.expirationTextField.doneTapPublisher
-      .sink { [weak self] _ in
-//        self?.viewModel.didTapKeyboardDoneButton(dateString: self?.expirationTextField.text)
-      }
-      .store(in: &self.subscriptions)
-    
     Publishers.CombineLatest3(
-      self.titleTextField.textDidChangedPublisher,
-      self.expirationTextField.textDidChangedPublisher,
-      self.categoryTextSubject
+      self.titleTextField.textDidChangedPublisher.eraseToAnyPublisher(),
+      self.expirationWarningLabel.publisher(for: \.isHidden).eraseToAnyPublisher(),
+      // 카테고리TextField는 키보드를 사용하지 않고 programatically로 text값 변경
+      self.categoryTextField.publisher(for: \.text).eraseToAnyPublisher()
     )
-    .map { !$0.isEmpty && !$1.isEmpty && !$2.isEmpty }
+    .compactMap { titleText, expirationLabelIsHidden, categoryText -> Bool? in
+      guard let text = categoryText else { return nil }
+      return !titleText.isEmpty && expirationLabelIsHidden && !text.isEmpty
+    }
     .sink { [weak self] isValid in
       self?.saveButton.isEnabled = isValid
       if isValid {
@@ -268,7 +290,6 @@ private extension ProductViewController {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
         self?.configureExpirationText(self?.expirationTextField.text)
-        self?.viewModel.didTapKeyboardDoneButton(dateString: self?.expirationTextField.text)
       }
       .store(in: &self.subscriptions)
     
@@ -344,14 +365,15 @@ extension ProductViewController {
     self.expirationTextField.text = formattedText
     self.expirationPreviousText = formattedText
   }
-  
-//  private func updateDayString() {
-//    if self.expirationTextField.text?.count == 7, self.expirationTextField.text?.last != "0" {
-//      guard var text = self.expirationTextField.text else { return }
-//      
-//      let index = text.index(text.startIndex, offsetBy: 6)
-//      text.insert("0", at: index)
-//      self.expirationTextField.text = text
-//    }
-//  }
+}
+
+// MARK: - UITextFieldDelegate
+extension ProductViewController: UITextFieldDelegate {
+  func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
+    if textField === self.expirationTextField {
+      self.viewModel.textFieldShouldEndEditing(textField.text)
+    }
+    
+    return true
+  }
 }
