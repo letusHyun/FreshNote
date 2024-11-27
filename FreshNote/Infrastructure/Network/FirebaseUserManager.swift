@@ -11,6 +11,8 @@ import FirebaseAuth
 class FirebaseUserManager {
   static let shared = FirebaseUserManager()
   
+  private init() { }
+  
   var userID: String? {
     Auth.auth().currentUser?.uid
   }
