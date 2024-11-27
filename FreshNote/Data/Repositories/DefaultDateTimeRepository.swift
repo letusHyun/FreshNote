@@ -10,9 +10,9 @@ import Combine
 import FirebaseFirestore
 
 final class DefaultDateTimeRepository: DateTimeRepository {
-  private let service: FirestoreService
+  private let service: any FirestoreService
   
-  init(service: FirestoreService) {
+  init(service: any FirestoreService) {
     self.service = service
   }
   

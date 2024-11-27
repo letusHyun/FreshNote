@@ -53,11 +53,11 @@ final class DefaultFirestoreService: FirestoreService {
     requestDTO: T,
     merge: Bool
   ) -> AnyPublisher<Void, any Error> where T : DTOable {
-    let dto = requestDTO.dictionary
+    let dictionary = requestDTO.dictionary
     
     return Future { [weak self] promise in
       self?.firestore.document(documentPath)
-        .setData(dto, merge: merge) { error in
+        .setData(dictionary, merge: merge) { error in
           if let error = error { return promise(.failure(error)) }
           return promise(.success(()))
         }
