@@ -256,19 +256,26 @@ private extension ProductViewController {
     
     self.viewModel.expirationPublisher
       .receive(on: DispatchQueue.main)
-      .sink { state in
+      .sink { [weak self] state in
         switch state {
         case .inCompleteDate(let text):
-          self.expirationWarningLabel.text = text
-          self.expirationWarningLabel.isHidden = false
+          self?.expirationWarningLabel.text = text
+          self?.expirationWarningLabel.isHidden = false
         case .invalidDate(let text):
-          self.expirationWarningLabel.text = text
-          self.expirationWarningLabel.isHidden = false
+          self?.expirationWarningLabel.text = text
+          self?.expirationWarningLabel.isHidden = false
         case .completeDate:
-          self.expirationWarningLabel.isHidden = true
+          self?.expirationWarningLabel.isHidden = true
         case .writing:
-          self.expirationWarningLabel.isHidden = true
+          self?.expirationWarningLabel.isHidden = true
         }
+      }
+      .store(in: &self.subscriptions)
+    
+    self.viewModel.expirationTextPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] text in
+        self?.expirationTextField.text = text
       }
       .store(in: &self.subscriptions)
   }
@@ -307,7 +314,7 @@ private extension ProductViewController {
     self.expirationTextField.textDidChangedPublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] text in
-        self?.configureExpirationText(text)
+//        self?.configureExpirationText(text)
         self?.viewModel.didChangeExpirationTextField(text)
       }
       .store(in: &self.subscriptions)
@@ -369,34 +376,34 @@ extension ProductViewController {
     }
   }
   
-  private func configureExpirationText(_ text: String?) {
-    guard let text = text else { return }
-    // 숫자만 포함
-    let numbers = text.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-    
-    let isDeleting = self.expirationPreviousText.count > text.count
-    
-    var formattedText = ""
-    for (index, number) in numbers.enumerated() {
-      if index == 1 { // YY
-        formattedText += String(number) + String(Constant.pointString)
-      } else if index == 3 { // MM
-        formattedText += String(number) + String(Constant.pointString)
-      } else { // DD
-        formattedText += String(number)
-      }
-      
-      // 최대 6자리(YY.MM.DD)
-      if index == 5 { break }
-    }
-    
-    if isDeleting, self.expirationPreviousText.last == Constant.pointString {
-      formattedText = String(formattedText.dropLast())
-    }
-    
-    self.expirationTextField.text = formattedText
-    self.expirationPreviousText = formattedText
-  }
+//  private func configureExpirationText(_ text: String?) {
+//    guard let text = text else { return }
+//    // 숫자만 포함
+//    let numbers = text.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+//    
+//    let isDeleting = self.expirationPreviousText.count > text.count
+//    
+//    var formattedText = ""
+//    for (index, number) in numbers.enumerated() {
+//      if index == 1 { // YY
+//        formattedText += String(number) + String(Constant.pointString)
+//      } else if index == 3 { // MM
+//        formattedText += String(number) + String(Constant.pointString)
+//      } else { // DD
+//        formattedText += String(number)
+//      }
+//      
+//      // 최대 6자리(YY.MM.DD)
+//      if index == 5 { break }
+//    }
+//    
+//    if isDeleting, self.expirationPreviousText.last == Constant.pointString {
+//      formattedText = String(formattedText.dropLast())
+//    }
+//    
+//    self.expirationTextField.text = formattedText
+//    self.expirationPreviousText = formattedText
+//  }
 }
 
 // MARK: - UITextFieldDelegate

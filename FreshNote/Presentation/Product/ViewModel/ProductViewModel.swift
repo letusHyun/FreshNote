@@ -36,6 +36,7 @@ protocol ProductViewModelOutput {
   var categoryPublisher: AnyPublisher<String, Never> { get }
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { get }
   var errorPublisher: AnyPublisher<Error?, Never> { get }
+  var expirationTextPublisher: AnyPublisher<String, Never> { get }
 }
 
 enum ExpirationOutputState {
@@ -62,6 +63,9 @@ final class DefaultProductViewModel: ProductViewModel {
   
   private var subscriptions = Set<AnyCancellable>()
   
+  /// 이전 text 길이를 저장해서 delete 감지할 때 사용하는 변수입니다.
+  private var previousExpirationTextLength = 0
+  
   // MARK: - Output
   var categoryToggleAnimationPublisher: AnyPublisher<Void, Never> {
     self.categoryToggleAnimationSubject.eraseToAnyPublisher()
@@ -69,6 +73,7 @@ final class DefaultProductViewModel: ProductViewModel {
   var imageDataPublisher: AnyPublisher<Data?, Never> { self.imageDataSubject.eraseToAnyPublisher() }
   var categoryPublisher: AnyPublisher<String, Never> { self.categorySubject.eraseToAnyPublisher() }
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { self.expirationSubject.eraseToAnyPublisher() }
+  var expirationTextPublisher: AnyPublisher<String, Never> { $expirationFormattedText.eraseToAnyPublisher() }
   var errorPublisher: AnyPublisher<(any Error)?, Never> { self.$error.eraseToAnyPublisher() }
   
   private let categoryToggleAnimationSubject: PassthroughSubject<Void, Never> = .init()
@@ -76,6 +81,8 @@ final class DefaultProductViewModel: ProductViewModel {
   private let categorySubject: PassthroughSubject<String, Never> = .init()
   private let expirationSubject: PassthroughSubject<ExpirationOutputState, Never> = .init()
   private let saveProductUseCase: any SaveProductUseCase
+  
+  @Published private var expirationFormattedText = ""
   @Published private var error: (any Error)?
   
   // MARK: - LifeCycle
@@ -150,14 +157,51 @@ final class DefaultProductViewModel: ProductViewModel {
       self.expirationSubject.send(.inCompleteDate(text: "유통기한이 완전히 입력되지 않았습니다. " + exampleDate))
       return
     }
-    self.validateDate(with: text)
   }
   
   func didChangeExpirationTextField(_ text: String) {
-    if text.count == Constants.expirationValidTextCount {
-      self.expirationSubject.send(.completeDate)
-    } else {
+    let isDeleting = text.count < self.previousExpirationTextLength
+    
+    // 삭제 시에는 포맷팅 없이 현재 text 사용
+    if isDeleting {
+      self.expirationFormattedText = text
+      self.previousExpirationTextLength = text.count
       self.expirationSubject.send(.writing)
+      return
+    }
+    
+    // 입력된 텍스트에서 마지막 문자가 숫자인 경우에만 포맷팅 진행
+    if let lastChar = text.last, lastChar.isNumber {
+      let numbers = text.filter { $0.isNumber }
+      var formatted = ""
+      
+      if numbers.count >= 2 {
+        let year = String(numbers.prefix(2))
+        formatted = year + "."
+        
+        if numbers.count >= 4 {
+          let month = String(numbers.dropFirst(2).prefix(2))
+          formatted += month + "."
+          
+          if numbers.count >= 5 { // day
+            let day = String(numbers.dropFirst(4).prefix(2))
+            formatted += day
+          }
+        } else {
+          formatted += String(numbers.dropFirst(2))
+        }
+      } else {
+        formatted = String(numbers)
+      }
+      
+      self.expirationFormattedText = formatted
+      self.previousExpirationTextLength = formatted.count
+      
+      if self.expirationFormattedText.count < Constants.expirationValidTextCount {
+        self.expirationSubject.send(.writing)
+      } else {
+        self.validateDate(with: formatted)
+      }
     }
   }
   
@@ -195,8 +239,7 @@ final class DefaultProductViewModel: ProductViewModel {
     
     let calendar = Calendar.current
     guard let date = calendar.date(from: dateComponents),
-          let range = calendar.range(of: .day, in: .month, for: date)
-    else {
+          let range = calendar.range(of: .day, in: .month, for: date) else {
       self.expirationSubject.send(.invalidDate(text: associatedSring))
       return
     }
