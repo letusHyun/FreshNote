@@ -9,7 +9,7 @@ import UIKit
 
 final class LoginButton: UIButton {
   // MARK: - Properteis
-  
+
   
   // MARK: - LifeCycle
   convenience init(title: String, imagePath: String, titleColor: UIColor, backgroundColor: UIColor) {

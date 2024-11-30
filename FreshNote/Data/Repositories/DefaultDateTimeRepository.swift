@@ -10,14 +10,14 @@ import Combine
 import FirebaseFirestore
 
 final class DefaultDateTimeRepository: DateTimeRepository {
-  private let service: any FirestoreService
+  private let firebaseNetworkService: any FirebaseNetworkService
   
-  init(service: any FirestoreService) {
-    self.service = service
+  init(firebaseNetworkService: any FirebaseNetworkService) {
+    self.firebaseNetworkService = firebaseNetworkService
   }
   
   func fetchDateTime(userID: String) -> AnyPublisher<Alarm, any Error> {
-    let publisher: AnyPublisher<AlarmResponseDTO, any Error> = service.getDocument(
+    let publisher: AnyPublisher<AlarmResponseDTO, any Error> = self.firebaseNetworkService.getDocument(
       documentPath: FirestorePath.userID(userID: userID)
     )
     
@@ -27,10 +27,10 @@ final class DefaultDateTimeRepository: DateTimeRepository {
   
   func saveDateTime(date: Int, hour: Int, minute: Int) -> AnyPublisher<Void, any Error> {
     guard let userID = FirebaseUserManager.shared.userID
-    else { return Fail(error: FirestoreServiceError.noUser).eraseToAnyPublisher() }
+    else { return Fail(error: FirebaseUserError.invalidUid).eraseToAnyPublisher() }
     
     let requestDTO = AlarmRequestDTO(date: date, hour: hour, minute: minute)
-    return service.setDocument(
+    return self.firebaseNetworkService.setDocument(
       documentPath: FirestorePath.userID(userID: userID),
       requestDTO: requestDTO,
       merge: true

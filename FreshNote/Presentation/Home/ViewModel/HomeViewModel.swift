@@ -60,7 +60,8 @@ final class DefaultHomeViewModel: HomeViewModel {
           expirationDate: Date(),
           category: "카테고리카테고리카테고리카테고리카테고리카테고리카테고리카테고리",
           memo: "메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모",
-          imageURL: nil
+          imageData: nil,
+          isPinned: false
         )
       )
     }

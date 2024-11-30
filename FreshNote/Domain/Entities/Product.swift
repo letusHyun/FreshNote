@@ -11,6 +11,7 @@ struct Product {
   let name: String
   let expirationDate: Date
   let category: String
-  let memo: String
-  let imageURL: URL?
+  let memo: String?
+  let imageData: Data?
+  let isPinned: Bool?
 }

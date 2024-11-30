@@ -22,8 +22,8 @@ final class MainSceneDIContainer {
   }
 }
 
-// MARK: - Private Helpers
 private extension MainSceneDIContainer {
+  // MARK: - Presentation Layer
   func makeHomeViewModel(actions: HomeViewModelActions) -> any HomeViewModel {
     return DefaultHomeViewModel(actions: actions)
   }
@@ -41,15 +41,38 @@ private extension MainSceneDIContainer {
   }
   
   func makeProductViewModel(actions: ProductViewModelActions, mode: ProductViewModelMode) -> any ProductViewModel {
-    return DefaultProductViewModel(actions: actions, mode: mode)
+    return DefaultProductViewModel(saveProductUseCase: self.makeSaveProductUseCase(), actions: actions, mode: mode)
   }
   
   func makePhotoBottomSheetViewModel(actions: PhotoBottomSheetViewModelActions) -> any PhotoBottomSheetViewModel {
     return DefaultPhotoBottomSheetViewModel(actions: actions)
   }
   
-  func makeCategoryBottomSheetViewModel(actions: CategoryBottomSheetViewModelActions) -> any CategoryBottomSheetViewModel {
+  func makeCategoryBottomSheetViewModel(
+    actions: CategoryBottomSheetViewModelActions
+  ) -> any CategoryBottomSheetViewModel {
     return DefaultCategoryBottomSheetViewModel(actions: actions)
+  }
+  
+  // MARK: - Domain Layer
+  func makeSaveProductUseCase() -> any SaveProductUseCase {
+    return DefaultSaveProductUseCase(
+      productRepository: self.makeProductRepository(),
+      imageRepository: self.makeImageRepository()
+    )
+  }
+  
+  // MARK: - Data Layer
+  func makeProductRepository() -> any ProductRepository {
+    return DefaultProductRepository(firebaseNetworkService: self.makeFirebaseNetworkService())
+  }
+  
+  func makeImageRepository() -> any ImageRepository {
+    return DefaultImageRepository(firebaseNetworkService: self.makeFirebaseNetworkService())
+  }
+  
+  func makeFirebaseNetworkService() -> any FirebaseNetworkService {
+    return DefaultFirebaseNetworkService()
   }
 }
 

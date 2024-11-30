@@ -225,6 +225,13 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
 private extension ProductViewController {
   // MARK: - Bind
   private func bind() {
+    self.viewModel.errorPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { error in
+        // TODO: - error handling
+      }
+      .store(in: &self.subscriptions)
+    
     self.viewModel.categoryToggleAnimationPublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
@@ -259,6 +266,8 @@ private extension ProductViewController {
           self.expirationWarningLabel.isHidden = false
         case .completeDate:
           self.expirationWarningLabel.isHidden = true
+        case .writing:
+          self.expirationWarningLabel.isHidden = true
         }
       }
       .store(in: &self.subscriptions)
@@ -266,15 +275,24 @@ private extension ProductViewController {
   
   // MARK: - Actions
   private func bindAction() {
+    // 유통기한 hidden && 유통기한 text가 존재하는 경우(유통기한 text는 didchange를 통해)
+    let expirationPublisher = self.viewModel.expirationPublisher
+      .map { state in
+        guard case .completeDate = state else { return false }
+        return true
+      }
+      .eraseToAnyPublisher()
+    
     Publishers.CombineLatest3(
-      self.titleTextField.textDidChangedPublisher.eraseToAnyPublisher(),
-      self.expirationWarningLabel.publisher(for: \.isHidden).eraseToAnyPublisher(),
+      self.titleTextField.textDidChangedPublisher,
+      expirationPublisher,
       // 카테고리TextField는 키보드를 사용하지 않고 programatically로 text값 변경
       self.categoryTextField.publisher(for: \.text).eraseToAnyPublisher()
     )
-    .compactMap { titleText, expirationLabelIsHidden, categoryText -> Bool? in
+    .receive(on: DispatchQueue.main)
+    .compactMap { titleText, isValidExpirationFormat, categoryText -> Bool? in
       guard let text = categoryText else { return nil }
-      return !titleText.isEmpty && expirationLabelIsHidden && !text.isEmpty
+      return !titleText.isEmpty && isValidExpirationFormat && !text.isEmpty
     }
     .sink { [weak self] isValid in
       self?.saveButton.isEnabled = isValid
@@ -286,10 +304,11 @@ private extension ProductViewController {
     }
     .store(in: &self.subscriptions)
     
-    self.expirationTextField.publisher(for: .editingChanged)
+    self.expirationTextField.textDidChangedPublisher
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.configureExpirationText(self?.expirationTextField.text)
+      .sink { [weak self] text in
+        self?.configureExpirationText(text)
+        self?.viewModel.didChangeExpirationTextField(text)
       }
       .store(in: &self.subscriptions)
     
@@ -301,7 +320,20 @@ private extension ProductViewController {
     
     self.saveButton.publisher(for: .touchUpInside)
       .sink { [weak self] _ in
-        self?.viewModel.didTapSaveButton()
+        guard let self = self,
+              let name = self.titleTextField.text,
+              let expiration = self.expirationTextField.text,
+              let category = self.categoryTextField.text,
+              let memo = self.descriptionTextView.text
+        else { return }
+        
+        self.viewModel.didTapSaveButton(
+          name: name,
+          expiration: expiration,
+          imageData: self.imageView.image?.jpegData(compressionQuality: 0.8),
+          category: category,
+          memo: memo
+        )
       }
       .store(in: &self.subscriptions)
     
@@ -371,7 +403,7 @@ extension ProductViewController {
 extension ProductViewController: UITextFieldDelegate {
   func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
     if textField === self.expirationTextField {
-      self.viewModel.textFieldShouldEndEditing(textField.text)
+      self.viewModel.expirationTextFieldShouldEndEditing(textField.text)
     }
     
     return true

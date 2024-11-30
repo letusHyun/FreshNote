@@ -27,12 +27,12 @@ final class OnboardingSceneDIContainer {
   }
   
   // MARK: - Data Layer
-  func makeFirestoreService() -> any FirestoreService {
-    return DefaultFirestoreService()
+  func makeFirebaseNetworkService() -> any FirebaseNetworkService {
+    return DefaultFirebaseNetworkService()
   }
   
   func makeDateTimeRepository() -> any DateTimeRepository {
-    return DefaultDateTimeRepository(service: self.makeFirestoreService())
+    return DefaultDateTimeRepository(firebaseNetworkService: self.makeFirebaseNetworkService())
   }
   
   // MARK: - Presentation Layer

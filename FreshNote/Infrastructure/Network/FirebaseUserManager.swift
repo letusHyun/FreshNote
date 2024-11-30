@@ -8,6 +8,10 @@
 import Foundation
 import FirebaseAuth
 
+enum FirebaseUserError: Error {
+  case invalidUid
+}
+
 class FirebaseUserManager {
   static let shared = FirebaseUserManager()
   

@@ -70,7 +70,7 @@ final class ProductCell: UITableViewCell {
 extension ProductCell {
   func configure(product: Product) {
     // imageURL이 nil이면, defaultImagePath 사용하기
-    if product.imageURL == nil {
+    if product.imageData == nil {
       thumbnailImageView.image = UIImage(named: "defaultProductImage")?
         .withInsets(UIEdgeInsets(top: 5, left: 5, bottom: 5, right: 5))
     } else {

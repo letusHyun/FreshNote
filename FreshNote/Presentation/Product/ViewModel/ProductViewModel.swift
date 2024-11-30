@@ -23,10 +23,11 @@ protocol ProductViewModel: ProductViewModelInput & ProductViewModelOutput { }
 protocol ProductViewModelInput {
   func viewDidLoad()
   func didTapBackButton()
-  func didTapSaveButton()
+  func didTapSaveButton(name: String, expiration: String, imageData: Data?, category: String, memo: String?)
   func didTapImageView()
   func didTapCategoryTextField()
-  func textFieldShouldEndEditing(_ text: String?)
+  func expirationTextFieldShouldEndEditing(_ text: String?)
+  func didChangeExpirationTextField(_ text: String)
 }
 
 protocol ProductViewModelOutput {
@@ -34,12 +35,14 @@ protocol ProductViewModelOutput {
   var imageDataPublisher: AnyPublisher<Data?, Never> { get }
   var categoryPublisher: AnyPublisher<String, Never> { get }
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { get }
+  var errorPublisher: AnyPublisher<Error?, Never> { get }
 }
 
 enum ExpirationOutputState {
   case invalidDate(text: String) // 유효성 검사 실패
   case inCompleteDate(text: String) // 완전히 기입하지 않은 상태
   case completeDate
+  case writing
 }
 
 enum ProductViewModelMode {
@@ -48,6 +51,10 @@ enum ProductViewModelMode {
 }
 
 final class DefaultProductViewModel: ProductViewModel {
+  private enum Constants {
+    static var expirationValidTextCount: Int { 8 }
+  }
+  
   // MARK: - Properties
   private let actions: ProductViewModelActions
   
@@ -62,14 +69,22 @@ final class DefaultProductViewModel: ProductViewModel {
   var imageDataPublisher: AnyPublisher<Data?, Never> { self.imageDataSubject.eraseToAnyPublisher() }
   var categoryPublisher: AnyPublisher<String, Never> { self.categorySubject.eraseToAnyPublisher() }
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { self.expirationSubject.eraseToAnyPublisher() }
+  var errorPublisher: AnyPublisher<(any Error)?, Never> { self.$error.eraseToAnyPublisher() }
   
   private let categoryToggleAnimationSubject: PassthroughSubject<Void, Never> = .init()
   private let imageDataSubject: PassthroughSubject<Data?, Never> = .init()
   private let categorySubject: PassthroughSubject<String, Never> = .init()
   private let expirationSubject: PassthroughSubject<ExpirationOutputState, Never> = .init()
+  private let saveProductUseCase: any SaveProductUseCase
+  @Published private var error: (any Error)?
   
   // MARK: - LifeCycle
-  init(actions: ProductViewModelActions, mode: ProductViewModelMode) {
+  init(
+    saveProductUseCase: any SaveProductUseCase,
+    actions: ProductViewModelActions,
+    mode: ProductViewModelMode
+  ) {
+    self.saveProductUseCase = saveProductUseCase
     self.actions = actions
     self.mode = mode
   }
@@ -83,10 +98,29 @@ final class DefaultProductViewModel: ProductViewModel {
     self.actions.pop()
   }
   
-  func didTapSaveButton() {
-    // 네트워크 save 요청 후
-    // 성공 시 pop
-    // 실패 시 return
+  func didTapSaveButton(name: String, expiration: String, imageData: Data?, category: String, memo: String?) {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yy.MM.dd"
+    guard let date = dateFormatter.date(from: expiration) else { return }
+    
+    let product = Product(
+      name: name,
+      expirationDate: date,
+      category: category,
+      memo: memo,
+      imageData: imageData,
+      isPinned: nil
+    )
+    
+    self.saveProductUseCase.save(product: product)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] completion in
+        guard case .failure(let error) = completion else { return }
+        self?.error = error
+      } receiveValue: { [weak self] in
+        self?.actions.pop()
+      }
+      .store(in: &self.subscriptions)
   }
   
   func didTapImageView() {
@@ -106,8 +140,8 @@ final class DefaultProductViewModel: ProductViewModel {
     self.actions.showCategoryBottomSheet(animateCategoryHandler, passCategoryHandler)
   }
   
-  func textFieldShouldEndEditing(_ text: String?) {
-    guard let text = text, text.count >= 8 else {
+  func expirationTextFieldShouldEndEditing(_ text: String?) {
+    guard let text = text, text.count >= Constants.expirationValidTextCount else {
       let dateFormatter = DateFormatter()
       dateFormatter.dateFormat = "yyyy"
       let yearString = dateFormatter.string(from: Date())
@@ -117,6 +151,14 @@ final class DefaultProductViewModel: ProductViewModel {
       return
     }
     self.validateDate(with: text)
+  }
+  
+  func didChangeExpirationTextField(_ text: String) {
+    if text.count == Constants.expirationValidTextCount {
+      self.expirationSubject.send(.completeDate)
+    } else {
+      self.expirationSubject.send(.writing)
+    }
   }
   
   // MARK: - Private Helpers
