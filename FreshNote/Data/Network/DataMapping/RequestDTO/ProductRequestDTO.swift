@@ -14,5 +14,5 @@ struct ProductRequestDTO: Encodable {
   let expirationDate: Date
   let category: String
   let isPinned: Bool?
-  let documentID: String
+  let didString: String
 }

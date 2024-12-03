@@ -5,6 +5,7 @@
 //  Created by SeokHyun on 10/30/24.
 //
 
+import Combine
 import UIKit
 
 final class ProductCell: UITableViewCell {
@@ -45,11 +46,13 @@ final class ProductCell: UITableViewCell {
     return lb
   }()
   
+  private var subscriptions = Set<AnyCancellable>()
+  
   // MARK: - LifeCycle
   override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
     super.init(style: style, reuseIdentifier: reuseIdentifier)
-    setupLayout()
-    setupLabelsStyle(labels: [nameLabel, expirationDateLabel, categoryLabel, memoLabel])
+    self.setupLayout()
+    self.setupLabelsStyle(labels: [self.nameLabel, self.expirationDateLabel, self.categoryLabel, self.memoLabel])
   }
   
   required init?(coder: NSCoder) {
@@ -58,32 +61,39 @@ final class ProductCell: UITableViewCell {
   
   override func prepareForReuse() {
     super.prepareForReuse()
-    thumbnailImageView.image = nil
-    nameLabel.text = nil
-    categoryLabel.text = nil
-    expirationDateLabel.text = nil
-    memoLabel.text = nil
+    self.thumbnailImageView.image = nil
+    self.nameLabel.text = nil
+    self.categoryLabel.text = nil
+    self.expirationDateLabel.text = nil
+    self.memoLabel.text = nil
   }
 }
 
 // MARK: - Helpers
 extension ProductCell {
   func configure(product: Product) {
-    // imageURL이 nil이면, defaultImagePath 사용하기
-    if product.imageData == nil {
-      thumbnailImageView.image = UIImage(named: "defaultProductImage")?
-        .withInsets(UIEdgeInsets(top: 5, left: 5, bottom: 5, right: 5))
+    if let imageURL = product.imageURL {
+      URLSession.shared.dataTaskPublisher(for: imageURL)
+        .map { UIImage(data: $0.data) }
+        .replaceError(with: nil)
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] image in
+          self?.thumbnailImageView.image = image
+        }
+        .store(in: &self.subscriptions)
+      
     } else {
-      // repository에 접근해서 path 받아오고 image 설정하기
+      self.thumbnailImageView.image = UIImage(named: "defaultProductImage")?
+        .withInsets(UIEdgeInsets(top: 5, left: 5, bottom: 5, right: 5))
     }
     
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy.MM.dd"
-    expirationDateLabel.text = dateFormatter.string(from: product.expirationDate)
+    self.expirationDateLabel.text = dateFormatter.string(from: product.expirationDate)
     
-    nameLabel.text = product.name
-    categoryLabel.text = product.category
-    memoLabel.text = product.memo
+    self.nameLabel.text = product.name
+    self.categoryLabel.text = product.category
+    self.memoLabel.text = product.memo
   }
 }
 

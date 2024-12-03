@@ -8,10 +8,11 @@
 import Foundation
 
 struct Product {
+  let did: DocumentID
   let name: String
   let expirationDate: Date
   let category: String
   let memo: String?
-  let imageData: Data?
+  let imageURL: URL?
   let isPinned: Bool?
 }

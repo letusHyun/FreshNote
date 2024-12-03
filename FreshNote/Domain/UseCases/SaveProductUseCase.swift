@@ -20,7 +20,7 @@ enum SaveProductUseCaseError: Error {
 }
 
 protocol SaveProductUseCase: AnyObject {
-  func save(product: Product) -> AnyPublisher<Void, any Error>
+  func save(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Void, any Error>
 }
 
 final class DefaultSaveProductUseCase: SaveProductUseCase {
@@ -36,22 +36,49 @@ final class DefaultSaveProductUseCase: SaveProductUseCase {
     self.imageRepository = imageRepository
   }
   
-  func save(product: Product) -> AnyPublisher<Void, any Error> {
-    guard let imageData = product.imageData else {
-      return self.productRepository.saveProduct(product: product, imageURLString: nil)
+  func save(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Void, any Error> {
+//    let product = Product(
+//      did: DocumentID(),
+//      name: requestValue.name,
+//      expirationDate: requestValue.expirationDate,
+//      category: requestValue.category,
+//      memo: requestValue.memo,
+//      imageURL: requestValue.imageData,
+//      isPinned: requestValue.isPinned
+//    )
+    
+    guard let imageData = requestValue.imageData else {
+      let product = Product(
+        did: DocumentID(),
+        name: requestValue.name,
+        expirationDate: requestValue.expirationDate,
+        category: requestValue.category,
+        memo: requestValue.memo,
+        imageURL: nil,
+        isPinned: requestValue.isPinned
+      )
+      return self.productRepository.saveProduct(product: product)
     }
 
     return self.imageRepository
       .saveImage(with: imageData, fileName: UUID().uuidString)
       .flatMap { [weak self] url in
         guard let self = self else { return Empty<Void, any Error>().eraseToAnyPublisher() }
+        let product = Product(
+          did: DocumentID(),
+          name: requestValue.name,
+          expirationDate: requestValue.expirationDate,
+          category: requestValue.category,
+          memo: requestValue.memo,
+          imageURL: url,
+          isPinned: requestValue.isPinned
+        )
         
-        let urlString = url.absoluteString
         return self.productRepository
-          .saveProduct(product: product, imageURLString: urlString)
+          .saveProduct(product: product)
           .retry(2)
           .catch { _ in
-            return self.imageRepository.deleteImage(with: urlString)
+            return self.imageRepository.deleteImage(with: url.absoluteString)
               .flatMap {
                 return Fail(error: SaveProductUseCaseError.failToSaveProduct).eraseToAnyPublisher()
               }
@@ -60,4 +87,13 @@ final class DefaultSaveProductUseCase: SaveProductUseCase {
       }
       .eraseToAnyPublisher()
   }
+}
+
+struct SaveProductUseCaseRequestValue {
+  let name: String
+  let expirationDate: Date
+  let category: String
+  let memo: String?
+  let imageData: Data?
+  let isPinned: Bool?
 }

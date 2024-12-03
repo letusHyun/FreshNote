@@ -9,5 +9,6 @@ import Combine
 import Foundation
 
 protocol ProductRepository {
-  func saveProduct(product: Product, imageURLString: String?) -> AnyPublisher<Void, any Error>
+  func saveProduct(product: Product) -> AnyPublisher<Void, any Error>
+  func fetchProducts() -> AnyPublisher<[Product], any Error>
 }

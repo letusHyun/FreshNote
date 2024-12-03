@@ -110,7 +110,7 @@ final class DefaultProductViewModel: ProductViewModel {
     dateFormatter.dateFormat = "yy.MM.dd"
     guard let date = dateFormatter.date(from: expiration) else { return }
     
-    let product = Product(
+    let requestValue = SaveProductUseCaseRequestValue(
       name: name,
       expirationDate: date,
       category: category,
@@ -119,7 +119,7 @@ final class DefaultProductViewModel: ProductViewModel {
       isPinned: nil
     )
     
-    self.saveProductUseCase.save(product: product)
+    self.saveProductUseCase.save(requestValue: requestValue)
       .receive(on: DispatchQueue.main)
       .sink { [weak self] completion in
         guard case .failure(let error) = completion else { return }

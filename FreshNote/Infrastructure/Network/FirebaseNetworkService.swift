@@ -19,6 +19,7 @@ enum FirebaseNetworkServiceError: Error {
 
 protocol FirebaseNetworkService {
   func getDocument<T: Decodable>(documentPath: String) -> AnyPublisher<T, any Error>
+  func getDocuments<T: Decodable>(collectionPath: String) -> AnyPublisher<[T], any Error>
   func setDocument<T: Encodable>(documentPath: String, requestDTO: T, merge: Bool) -> AnyPublisher<Void, any Error>
   func uploadData(path: String, fileName: String, data: Data) -> AnyPublisher<URL, any Error>
   func deleteData(path: String) -> AnyPublisher<Void, any Error>
@@ -60,8 +61,30 @@ final class DefaultFirebaseNetworkService: FirebaseNetworkService {
         
         do {
           let data = try JSONSerialization.data(withJSONObject: dictionary)
-          let decodedDate = try JSONDecoder().decode(T.self, from: data)
-          promise(.success(decodedDate))
+          let decodedData = try JSONDecoder().decode(T.self, from: data)
+          promise(.success(decodedData))
+        } catch {
+          promise(.failure(error))
+        }
+      }
+    }
+    .eraseToAnyPublisher()
+  }
+  
+  func getDocuments<T: Decodable>(collectionPath: String) -> AnyPublisher<[T], any Error> {
+    return Future { [weak self] promise in
+      self?.firestore.collection(collectionPath).getDocuments { (snapshot, error) in
+        if let error = error { promise(.failure(error)) }
+        
+        do {
+          let decodedDatas: [T] = try snapshot?.documents.compactMap { snapshot in
+            let dictionary = snapshot.data()
+            let data = try JSONSerialization.data(withJSONObject: dictionary)
+            let decodedData = try JSONDecoder().decode(T.self, from: data)
+            return decodedData
+          } ?? []
+          
+          promise(.success(decodedDatas))
         } catch {
           promise(.failure(error))
         }

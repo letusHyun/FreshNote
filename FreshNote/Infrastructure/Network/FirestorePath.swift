@@ -10,17 +10,17 @@ import FirebaseFirestore
 
 enum FirestorePath: String {
   case users
-  case items
+  case products
   
   static func userID(userID: String) -> String {
     return "\(users.rawValue)/\(userID)"
   }
   
-  static func items(userID: String) -> String {
-    return "\(users.rawValue)/\(userID)/\(items.rawValue)"
+  static func products(userID: String) -> String {
+    return "\(users.rawValue)/\(userID)/\(products.rawValue)"
   }
   
-  static func item(userID: String, itemID: String) -> String {
-    return "\(users.rawValue)/\(userID)/\(items.rawValue)/\(itemID)"
+  static func product(userID: String, productID: String) -> String {
+    return "\(users.rawValue)/\(userID)/\(products.rawValue)/\(productID)"
   }
 }

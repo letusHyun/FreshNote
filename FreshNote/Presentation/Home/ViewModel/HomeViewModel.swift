@@ -5,8 +5,8 @@
 //  Created by SeokHyun on 10/28/24.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 struct HomeViewModelActions {
   let showNotificationPage: () -> Void
@@ -27,6 +27,7 @@ protocol HomeViewModelInput {
 protocol HomeViewModelOutput {
   var reloadDataPublisher: AnyPublisher<Void, Never> { get }
   var deleteRowsPublisher: AnyPublisher<(IndexPath, (Bool) -> Void), Never> { get }
+  var errorPublisher: AnyPublisher<(any Error)?, Never> { get }
 }
 
 protocol HomeViewModel: HomeViewModelInput, HomeViewModelOutput {}
@@ -36,36 +37,59 @@ final class DefaultHomeViewModel: HomeViewModel {
   
   // MARK: - Properties
   private let actions: HomeViewModelActions
+  private var items = [Product]()
+  private var subscriptions = Set<AnyCancellable>()
   
   // MARK: - Output
-  private var items = [Product]()
   private var reloadDataSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
   private var deleteRowsSubject: PassthroughSubject<(IndexPath, SwipeCompletion), Never> = PassthroughSubject()
+  private let fetchProductUseCase: any FetchProductUseCase
   
-  var reloadDataPublisher: AnyPublisher<Void, Never> { reloadDataSubject.eraseToAnyPublisher() }
-  var deleteRowsPublisher: AnyPublisher<(IndexPath, SwipeCompletion), Never> { deleteRowsSubject.eraseToAnyPublisher() }
+  var reloadDataPublisher: AnyPublisher<Void, Never> { self.reloadDataSubject.eraseToAnyPublisher() }
+  var deleteRowsPublisher: AnyPublisher<(IndexPath, SwipeCompletion), Never> { self.deleteRowsSubject.eraseToAnyPublisher() }
+  var errorPublisher: AnyPublisher<(any Error)?, Never> { self.$error.eraseToAnyPublisher() }
+  
+  @Published private var error: (any Error)?
   
   // MARK: - LifeCycle
-  init(actions: HomeViewModelActions) {
+  init(actions: HomeViewModelActions,
+       fetchProductUseCase: any FetchProductUseCase
+  ) {
     self.actions = actions
+    self.fetchProductUseCase = fetchProductUseCase
   }
   
   // MARK: - Input
   func viewDidLoad() {
     // firebase store에 접근해서 데이터 fetch
-    for i in 0...20 {
-      self.items.append(
-        Product(
-          name: "\(i+1)  제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목",
-          expirationDate: Date(),
-          category: "카테고리카테고리카테고리카테고리카테고리카테고리카테고리카테고리",
-          memo: "메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모",
-          imageData: nil,
-          isPinned: false
-        )
-      )
-    }
-    self.reloadDataSubject.send()
+    self.fetchProductUseCase.fetchProducts()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] completion in
+        guard case .failure(let error) = completion else { return }
+        self?.error = error
+      } receiveValue: { [weak self] products in
+        for product in products {
+          self?.items.append(product)
+        }
+        self?.reloadDataSubject.send()
+      }
+      .store(in: &self.subscriptions)
+
+    
+//    for i in 0...20 {
+//      self.items.append(
+//        Product(
+//          did: DocumentID(),
+//          name: "\(i+1)  제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목제목",
+//          expirationDate: Date(),
+//          category: "카테고리카테고리카테고리카테고리카테고리카테고리카테고리카테고리",
+//          memo: "메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모메모",
+//          imageData: nil,
+//          isPinned: false
+//        )
+//      )
+//    }
+
   }
   
   func numberOfItemsInSection() -> Int {
