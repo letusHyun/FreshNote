@@ -15,7 +15,6 @@ final class DefaultProductRepository: ProductRepository {
     self.firebaseNetworkService = firebaseNetworkService
   }
 
-  // TODO: - 테스트 해보고 잘 작동되면, 클로드에게 부탁해서 지저분한 코드 리펙토링하기. 리펙토링 후 또 실험해보기
   func fetchProducts() -> AnyPublisher<[Product], any Error> {
     guard let userID = FirebaseUserManager.shared.userID else {
       return Fail(error: FirebaseUserError.invalidUid).eraseToAnyPublisher()
@@ -26,39 +25,8 @@ final class DefaultProductRepository: ProductRepository {
     let requestPublisher: AnyPublisher<[ProductResponseDTO], any Error> = self.firebaseNetworkService
       .getDocuments(collectionPath: fullPath)
     
-    return requestPublisher.map { responseDTOArr -> [Product] in
-      
-      var products: [Product] = []
-      for responseDTO in responseDTOArr {
-        if let did = DocumentID(from: responseDTO.didString) {
-          if let imageURLString = responseDTO.imageURLString, let url = URL(string: imageURLString) {
-            do {
-              let product = Product(
-                did: did,
-                name: responseDTO.name,
-                expirationDate: responseDTO.expirationDate,
-                category: responseDTO.category,
-                memo: responseDTO.memo,
-                imageURL: url,
-                isPinned: responseDTO.isPinned
-              )
-              products.append(product)
-            } catch { }
-          } else { // 이미지 실패 시,
-            let product = Product(
-              did: did,
-              name: responseDTO.name,
-              expirationDate: responseDTO.expirationDate,
-              category: responseDTO.category,
-              memo: responseDTO.memo,
-              imageURL: nil,
-              isPinned: responseDTO.isPinned
-            )
-            products.append(product)
-          }
-        }
-      }
-      return products
+    return requestPublisher.map { dtoArray -> [Product] in
+      return dtoArray.compactMap { self.convertProduct($0) }
     }
     .eraseToAnyPublisher()
   }
@@ -82,5 +50,24 @@ final class DefaultProductRepository: ProductRepository {
     )
 
     return self.firebaseNetworkService.setDocument(documentPath: fullPath, requestDTO: requestDTO, merge: true)
+  }
+}
+
+// MARK: - Private Helpers
+extension DefaultProductRepository {
+  private func convertProduct(_ dto: ProductResponseDTO) -> Product? {
+    guard let did = DocumentID(from: dto.didString) else { return nil }
+    
+    let imageURL = dto.imageURLString.flatMap { URL(string: $0) }
+    
+    return Product(
+      did: did,
+      name: dto.name,
+      expirationDate: dto.expirationDate,
+      category: dto.category,
+      memo: dto.memo,
+      imageURL: imageURL,
+      isPinned: dto.isPinned
+    )
   }
 }
