@@ -14,8 +14,6 @@ final class HomeViewController: BaseViewController {
   
   private let tableView: UITableView = {
     let tv = UITableView(frame: .zero)
-    tv.estimatedRowHeight = 100
-    tv.rowHeight = UITableView.automaticDimension
     tv.register(ProductCell.self, forCellReuseIdentifier: ProductCell.id)
     tv.separatorStyle = .none
     return tv
@@ -103,7 +101,7 @@ extension HomeViewController {
     .store(in: &self.subscriptions)
     
     viewModel.deleteRowsPublisher.sink { [weak self] indexPath, swipeCompletion in
-      self?.tableView.deleteRows(at: [indexPath], with: .automatic)
+      self?.tableView.deleteRows(at: [indexPath], with: .fade)
       swipeCompletion(true)
     }.store(in: &self.subscriptions)
   }
@@ -150,6 +148,10 @@ extension HomeViewController: UITableViewDelegate {
   
   func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
     cell.selectionStyle = .none
+  }
+  
+  func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+    return 100
   }
 }
 

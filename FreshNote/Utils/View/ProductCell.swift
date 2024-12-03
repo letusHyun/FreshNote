@@ -15,10 +15,8 @@ final class ProductCell: UITableViewCell {
   }
   
   private let thumbnailImageView: UIImageView = {
-    // 이미지뷰와 이미지의 padding 적용하기
-    // TODO: - default image 추가해야합니다.
     let iv = UIImageView()
-    iv.contentMode = .scaleAspectFit
+    iv.contentMode = .scaleAspectFill
     iv.layer.cornerRadius = 7
     iv.clipsToBounds = true
     iv.layer.borderWidth = 2
@@ -112,7 +110,7 @@ extension ProductCell {
     }()
     
     let tagLabels = makeAndSetupStyleTagLabels()
-    let mainLabels = [nameLabel, expirationDateLabel, categoryLabel, memoLabel].map {
+    let mainLabels = [self.nameLabel, self.expirationDateLabel, self.categoryLabel, self.memoLabel].map {
       $0.translatesAutoresizingMaskIntoConstraints = false
       return $0
     }
@@ -181,7 +179,7 @@ extension ProductCell {
       let label = UILabel()
       label.text = $0
       label.translatesAutoresizingMaskIntoConstraints = false
-      contentView.addSubview(label)
+//      contentView.addSubview(label)
       label.setContentCompressionResistancePriority(.required, for: .horizontal)
       return label
     }
