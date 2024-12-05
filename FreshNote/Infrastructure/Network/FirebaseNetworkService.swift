@@ -22,7 +22,9 @@ protocol FirebaseNetworkService {
   func getDocuments<T: Decodable>(collectionPath: String) -> AnyPublisher<[T], any Error>
   func setDocument<T: Encodable>(documentPath: String, requestDTO: T, merge: Bool) -> AnyPublisher<Void, any Error>
   func uploadData(path: String, fileName: String, data: Data) -> AnyPublisher<URL, any Error>
-  func deleteData(path: String) -> AnyPublisher<Void, any Error>
+  /// storage에서 urlString을 기반인 데이터를 제거합니다.
+  func deleteData(urlString: String) -> AnyPublisher<Void, any Error>
+  func deleteDocument(documentPath: String) -> AnyPublisher<Void, any Error>
 }
 
 final class DefaultFirebaseNetworkService: FirebaseNetworkService {
@@ -57,7 +59,9 @@ final class DefaultFirebaseNetworkService: FirebaseNetworkService {
           promise(.failure(error))
         }
         
-        guard let dictionary = snapshot?.data() else { return promise(.failure(FirebaseNetworkServiceError.invalidData)) }
+        guard let dictionary = snapshot?.data() else {
+          return promise(.failure(FirebaseNetworkServiceError.invalidData))
+        }
         
         do {
           let data = try JSONSerialization.data(withJSONObject: dictionary)
@@ -115,12 +119,25 @@ final class DefaultFirebaseNetworkService: FirebaseNetworkService {
     .eraseToAnyPublisher()
   }
   
-  func deleteData(path: String) -> AnyPublisher<Void, any Error> {
+  func deleteData(urlString: String) -> AnyPublisher<Void, any Error> {
     return Future { [weak self] promise in
-      self?.storage.reference(withPath: path).delete { error in
+      self?.storage.reference(forURL: urlString).delete { error in
         if let error = error { return promise(.failure(error)) }
         promise(.success(()))
       }
+    }
+    .eraseToAnyPublisher()
+  }
+  
+  func deleteDocument(documentPath: String) -> AnyPublisher<Void, any Error> {
+    return Future { [weak self] promise in
+      self?.firestore.document(documentPath)
+        .delete { completion in
+          if let error = completion {
+            promise(.failure(error))
+          }
+          promise(.success(()))
+        }
     }
     .eraseToAnyPublisher()
   }

@@ -10,9 +10,14 @@ import Foundation
 
 final class DefaultImageRepository: ImageRepository {
   private let firebaseNetworkService: any FirebaseNetworkService
+  private let backgroundQueue: DispatchQueue
   
-  init(firebaseNetworkService: any FirebaseNetworkService) {
+  init(
+    firebaseNetworkService: any FirebaseNetworkService,
+    backgroundQueue: DispatchQueue = DispatchQueue.global(qos: .userInitiated)
+  ) {
     self.firebaseNetworkService = firebaseNetworkService
+    self.backgroundQueue = backgroundQueue
   }
   
   func saveImage(with data: Data, fileName: String) -> AnyPublisher<URL, any Error> {
@@ -20,10 +25,16 @@ final class DefaultImageRepository: ImageRepository {
       return Fail(error: FirebaseUserError.invalidUid).eraseToAnyPublisher()
     }
     
-    return self.firebaseNetworkService.uploadData(path: userID, fileName: fileName, data: data)
+    return self.firebaseNetworkService
+      .uploadData(path: userID, fileName: fileName, data: data)
+      .receive(on: self.backgroundQueue)
+      .eraseToAnyPublisher()
   }
   
-  func deleteImage(with urlString: String) -> AnyPublisher<Void, any Error> {
-    self.firebaseNetworkService.deleteData(path: urlString)
+  func deleteImage(with url: URL) -> AnyPublisher<Void, any Error> {
+    return self.firebaseNetworkService
+      .deleteData(urlString: url.absoluteString)
+      .receive(on: self.backgroundQueue)
+      .eraseToAnyPublisher()
   }
 }

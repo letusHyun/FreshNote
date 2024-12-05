@@ -125,13 +125,11 @@ extension PhotoBottomSheetViewController: UIImagePickerControllerDelegate, UINav
     _ picker: UIImagePickerController,
     didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]
   ) {
-    if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-      let imageData = image.jpegData(compressionQuality: 0.8)
+    if let image = info[UIImagePickerController.InfoKey.originalImage] as? UIImage,
+       let imageData = image.jpegData(compressionQuality: 0.8) {
       picker.dismiss(animated: true)
       
       self.viewModel.didFinishPickingMediaWithInfo(data: imageData)
-      // 여기서 받은 이미지를 vm -> Coordinator전달 후, coordinator에서 photoVM -> photoVC에게 전달
-      // vm을 거쳐야 하므로, Data타입으로 변환해서 사용하는것이 좋을 듯
     }
   }
 }

@@ -11,9 +11,14 @@ import FirebaseFirestore
 
 final class DefaultDateTimeRepository: DateTimeRepository {
   private let firebaseNetworkService: any FirebaseNetworkService
+  private let backgroundQueue: DispatchQueue
   
-  init(firebaseNetworkService: any FirebaseNetworkService) {
+  init(
+    firebaseNetworkService: any FirebaseNetworkService,
+    backgroundQueue: DispatchQueue = DispatchQueue.global(qos: .userInitiated)
+  ) {
     self.firebaseNetworkService = firebaseNetworkService
+    self.backgroundQueue = backgroundQueue
   }
   
   // TODO: - userID는 매개변수로 적절하지 않음. 따라서 수정 필요함
@@ -22,6 +27,8 @@ final class DefaultDateTimeRepository: DateTimeRepository {
     let publisher: AnyPublisher<AlarmResponseDTO, any Error> = self.firebaseNetworkService.getDocument(
       documentPath: FirestorePath.userID(userID: userID)
     )
+      .receive(on: self.backgroundQueue)
+      .eraseToAnyPublisher()
     
     return publisher.tryMap { $0.toDomain() }
       .eraseToAnyPublisher()
@@ -37,5 +44,7 @@ final class DefaultDateTimeRepository: DateTimeRepository {
       requestDTO: requestDTO,
       merge: true
     )
+    .receive(on: self.backgroundQueue)
+    .eraseToAnyPublisher()
   }
 }

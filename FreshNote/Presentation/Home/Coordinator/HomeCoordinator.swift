@@ -5,6 +5,7 @@
 //  Created by SeokHyun on 10/28/24.
 //
 
+import Combine
 import UIKit
 
 protocol HomeCoordinatorDependencies: AnyObject {
@@ -21,6 +22,7 @@ final class HomeCoordinator: BaseCoordinator {
   // MARK: - Properties
   private let dependencies: any HomeCoordinatorDependencies
   
+  private let productSubject = PassthroughSubject<Product?, Never>()
   
   // MARK: - LifeCycle
   init(navigationController: UINavigationController?, dependencies: any HomeCoordinatorDependencies) {
@@ -38,7 +40,8 @@ extension HomeCoordinator {
       self?.showSearchPage()
     }, showProductPage: { [weak self] in
       self?.showProductPage()
-    })
+    }, productPublisher: self.productSubject.eraseToAnyPublisher()
+    )
     
     let homeViewController = self.dependencies.makeHomeViewController(actions: actions)
     self.navigationController?.pushViewController(homeViewController, animated: true)
@@ -70,7 +73,7 @@ extension HomeCoordinator {
       navigationController: self.navigationController,
       mode: .create
     )
-    childCoordinator.finishDelegate = self
+    childCoordinator.productCoordinatorFinishDelegate = self
     self.childCoordinators[childCoordinator.identifier] = childCoordinator
     childCoordinator.start()
   }
@@ -80,5 +83,12 @@ extension HomeCoordinator {
 extension HomeCoordinator: CoordinatorFinishDelegate {
   func coordinatorDidFinish(_ childCoordinator: BaseCoordinator) {
     self.childCoordinators.removeValue(forKey: childCoordinator.identifier)
+  }
+}
+
+extension HomeCoordinator: ProductCoordinatorFinishDelegate {
+  func finish(_ childCoordinator: BaseCoordinator, with product: Product?) {
+    self.childCoordinators.removeValue(forKey: childCoordinator.identifier)
+    self.productSubject.send(product)
   }
 }

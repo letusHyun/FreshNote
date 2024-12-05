@@ -12,7 +12,7 @@ struct ProductViewModelActions {
   typealias AnimateCategoryHandler = () -> Void
   typealias PassCategoryHandler = (String) -> Void
   
-  let pop: () -> Void
+  let pop: (Product?) -> Void
   let showPhotoBottomSheet: (@escaping (Data?) -> Void) -> Void
   let showCategoryBottomSheet: (@escaping AnimateCategoryHandler,
                                 @escaping PassCategoryHandler) -> Void
@@ -37,6 +37,7 @@ protocol ProductViewModelOutput {
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { get }
   var errorPublisher: AnyPublisher<Error?, Never> { get }
   var expirationTextPublisher: AnyPublisher<String, Never> { get }
+  var isSelectedImage: Bool { get }
 }
 
 enum ExpirationOutputState {
@@ -65,6 +66,8 @@ final class DefaultProductViewModel: ProductViewModel {
   
   /// 이전 text 길이를 저장해서 delete 감지할 때 사용하는 변수입니다.
   private var previousExpirationTextLength = 0
+  
+  var isSelectedImage: Bool = false
   
   // MARK: - Output
   var categoryToggleAnimationPublisher: AnyPublisher<Void, Never> {
@@ -96,13 +99,17 @@ final class DefaultProductViewModel: ProductViewModel {
     self.mode = mode
   }
   
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
+  }
+  
   // MARK: - Input
   func viewDidLoad() {
     // 모드에 따라서 vc placeholder 유무 결정 및, dataFetch
   }
   
   func didTapBackButton() {
-    self.actions.pop()
+    self.actions.pop(nil)
   }
   
   func didTapSaveButton(name: String, expiration: String, imageData: Data?, category: String, memo: String?) {
@@ -116,22 +123,23 @@ final class DefaultProductViewModel: ProductViewModel {
       category: category,
       memo: memo,
       imageData: imageData,
-      isPinned: nil
+      isPinned: false
     )
     
-    self.saveProductUseCase.save(requestValue: requestValue)
+    self.saveProductUseCase.execute(requestValue: requestValue)
       .receive(on: DispatchQueue.main)
       .sink { [weak self] completion in
         guard case .failure(let error) = completion else { return }
         self?.error = error
-      } receiveValue: { [weak self] in
-        self?.actions.pop()
+      } receiveValue: { [weak self] product in
+        self?.actions.pop(product)
       }
       .store(in: &self.subscriptions)
   }
   
   func didTapImageView() {
     self.actions.showPhotoBottomSheet({ [weak self] data in
+      self?.isSelectedImage = data != nil
       self?.imageDataSubject.send(data)
     })
   }

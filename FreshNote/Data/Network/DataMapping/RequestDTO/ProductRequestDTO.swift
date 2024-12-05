@@ -13,6 +13,7 @@ struct ProductRequestDTO: Encodable {
   let imageURLString: String?
   let expirationDate: Date
   let category: String
-  let isPinned: Bool?
+  let isPinned: Bool
   let didString: String
+  let creationDate: Date
 }

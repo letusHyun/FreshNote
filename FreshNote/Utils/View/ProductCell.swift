@@ -179,7 +179,6 @@ extension ProductCell {
       let label = UILabel()
       label.text = $0
       label.translatesAutoresizingMaskIntoConstraints = false
-//      contentView.addSubview(label)
       label.setContentCompressionResistancePriority(.required, for: .horizontal)
       return label
     }

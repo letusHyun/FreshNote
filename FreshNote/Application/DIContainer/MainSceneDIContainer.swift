@@ -25,7 +25,11 @@ final class MainSceneDIContainer {
 private extension MainSceneDIContainer {
   // MARK: - Presentation Layer
   func makeHomeViewModel(actions: HomeViewModelActions) -> any HomeViewModel {
-    return DefaultHomeViewModel(actions: actions, fetchProductUseCase: self.makefetchProductUseCase())
+    return DefaultHomeViewModel(
+      actions: actions,
+      fetchProductUseCase: self.makefetchProductUseCase(),
+      deleteProductUseCase: self.makeDeleteProductUseCase()
+    )
   }
   
   func makeCalendarViewModel(actions: CalendarViewModelActions) -> any CalendarViewModel {
@@ -55,6 +59,13 @@ private extension MainSceneDIContainer {
   }
   
   // MARK: - Domain Layer
+  func makeDeleteProductUseCase() -> any DeleteProductUseCase {
+    return DefaultDeleteProductUseCase(
+      imageRepository: self.makeImageRepository(),
+      productRepository: self.makeProductRepository()
+    )
+  }
+  
   func makeSaveProductUseCase() -> any SaveProductUseCase {
     return DefaultSaveProductUseCase(
       productRepository: self.makeProductRepository(),

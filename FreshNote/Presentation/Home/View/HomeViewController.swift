@@ -95,6 +95,14 @@ extension HomeViewController {
   }
   
   private func bind(to viewModel: any HomeViewModel) {
+    viewModel.errorPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] error in
+        // TODO: - 에러 UI 처리하기
+        print("error발생: \(error?.localizedDescription)")
+      }
+      .store(in: &self.subscriptions)
+    
     viewModel.reloadDataPublisher.sink { [weak self] in
       self?.tableView.reloadData()
     }

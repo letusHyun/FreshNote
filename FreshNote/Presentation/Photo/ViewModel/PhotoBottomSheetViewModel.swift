@@ -17,7 +17,7 @@ protocol PhotoBottomSheetViewModelInput {
   func didTapAlbumButton() 
   func didTapCameraButton()
   func didTapDeleteButton()
-  func didFinishPickingMediaWithInfo(data: Data?)
+  func didFinishPickingMediaWithInfo(data: Data)
 }
 
 protocol PhotoBottomSheetViewModelOutput {
@@ -46,10 +46,11 @@ final class DefaultPhotoBottomSheetViewModel: PhotoBottomSheetViewModel {
   }
   
   func didTapDeleteButton() {
+    // 삭제 시, productVM에서 감지 해야 함.
     print("현재 사진 삭제 탭")
   }
   
-  func didFinishPickingMediaWithInfo(data: Data?) {
+  func didFinishPickingMediaWithInfo(data: Data) {
     self.actions.passData(data)
   }
 }

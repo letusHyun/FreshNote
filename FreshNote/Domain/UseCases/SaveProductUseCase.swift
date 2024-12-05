@@ -20,7 +20,7 @@ enum SaveProductUseCaseError: Error {
 }
 
 protocol SaveProductUseCase: AnyObject {
-  func save(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Void, any Error>
+  func execute(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Product, any Error>
 }
 
 final class DefaultSaveProductUseCase: SaveProductUseCase {
@@ -36,64 +36,64 @@ final class DefaultSaveProductUseCase: SaveProductUseCase {
     self.imageRepository = imageRepository
   }
   
-  func save(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Void, any Error> {
-//    let product = Product(
-//      did: DocumentID(),
-//      name: requestValue.name,
-//      expirationDate: requestValue.expirationDate,
-//      category: requestValue.category,
-//      memo: requestValue.memo,
-//      imageURL: requestValue.imageData,
-//      isPinned: requestValue.isPinned
-//    )
-    
+  func execute(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Product, any Error> {
+    // 이미지가 존재하지 않는 경우
     guard let imageData = requestValue.imageData else {
-      let product = Product(
-        did: DocumentID(),
-        name: requestValue.name,
-        expirationDate: requestValue.expirationDate,
-        category: requestValue.category,
-        memo: requestValue.memo,
-        imageURL: nil,
-        isPinned: requestValue.isPinned
-      )
+      let product = self.makeProduct(from: requestValue, url: nil)
+      
       return self.productRepository.saveProduct(product: product)
+        .map { return product }
+        .eraseToAnyPublisher()
     }
 
+    // 이미지가 존재하는 경우
+    let fileName = UUID().uuidString
     return self.imageRepository
-      .saveImage(with: imageData, fileName: UUID().uuidString)
+      .saveImage(with: imageData, fileName: fileName)
       .flatMap { [weak self] url in
-        guard let self = self else { return Empty<Void, any Error>().eraseToAnyPublisher() }
-        let product = Product(
-          did: DocumentID(),
-          name: requestValue.name,
-          expirationDate: requestValue.expirationDate,
-          category: requestValue.category,
-          memo: requestValue.memo,
-          imageURL: url,
-          isPinned: requestValue.isPinned
-        )
+        guard let self = self else { return Empty<Product, any Error>().eraseToAnyPublisher() }
+        let product = self.makeProduct(from: requestValue, url: url)
         
         return self.productRepository
           .saveProduct(product: product)
           .retry(2)
           .catch { _ in
-            return self.imageRepository.deleteImage(with: url.absoluteString)
+            return self.imageRepository.deleteImage(with: url)
               .flatMap {
                 return Fail(error: SaveProductUseCaseError.failToSaveProduct).eraseToAnyPublisher()
               }
           }
+          .map { return product }
           .eraseToAnyPublisher()
       }
       .eraseToAnyPublisher()
   }
 }
 
+// MARK: - Private Helpers
+extension DefaultSaveProductUseCase {
+  private func makeProduct(from requestValue: SaveProductUseCaseRequestValue, url: URL?) -> Product {
+    let dateFormatManager = DateFormatManager()
+    
+    return Product(
+      did: DocumentID(),
+      name: requestValue.name,
+      expirationDate: requestValue.expirationDate,
+      category: requestValue.category,
+      memo: requestValue.memo,
+      imageURL: url,
+      isPinned: requestValue.isPinned,
+      creationDate: dateFormatManager.makeCurrentDate()
+    )
+  }
+}
+
+// MARK: - Request Value
 struct SaveProductUseCaseRequestValue {
   let name: String
   let expirationDate: Date
   let category: String
   let memo: String?
   let imageData: Data?
-  let isPinned: Bool?
+  let isPinned: Bool
 }

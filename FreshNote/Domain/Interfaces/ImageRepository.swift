@@ -10,5 +10,5 @@ import Foundation
 
 protocol ImageRepository {
   func saveImage(with data: Data, fileName: String) -> AnyPublisher<URL, any Error>
-  func deleteImage(with urlString: String) -> AnyPublisher<Void, any Error>
+  func deleteImage(with url: URL) -> AnyPublisher<Void, any Error>
 }

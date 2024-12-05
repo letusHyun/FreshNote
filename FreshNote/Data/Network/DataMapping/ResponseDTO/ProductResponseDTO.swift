@@ -13,8 +13,9 @@ struct ProductResponseDTO: Decodable {
   let imageURLString: String?
   let expirationDate: Date
   let category: String
-  let isPinned: Bool?
+  let isPinned: Bool
   let didString: String
+  let creationDate: Date
 }
 
 extension ProductResponseDTO {
@@ -26,7 +27,8 @@ extension ProductResponseDTO {
       category: self.category,
       memo: self.memo,
       imageURL: url,
-      isPinned: self.isPinned
+      isPinned: self.isPinned,
+      creationDate: self.creationDate
     )
   }
 }
