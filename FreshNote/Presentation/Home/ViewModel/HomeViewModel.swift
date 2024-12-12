@@ -11,7 +11,7 @@ import Foundation
 struct HomeViewModelActions {
   let showNotificationPage: () -> Void
   let showSearchPage: () -> Void
-  let showProductPage: () -> Void
+  let showProductPage: (Product?) -> Void
   let productPublisher: AnyPublisher<Product?, Never>
 }
 
@@ -23,12 +23,14 @@ protocol HomeViewModelInput {
   func didTapNotificationButton()
   func didTapSearchButton()
   func didTapAddProductButton()
+  func didSelectRow(at indexPath: IndexPath)
 }
 
 protocol HomeViewModelOutput {
   var reloadDataPublisher: AnyPublisher<Void, Never> { get }
-  var deleteRowsPublisher: AnyPublisher<(IndexPath, (Bool) -> Void), Never> { get }
+  var deleteRowsPublisher: AnyPublisher<([IndexPath], (Bool) -> Void), Never> { get }
   var errorPublisher: AnyPublisher<(any Error)?, Never> { get }
+  var reloadRowsPublisher: AnyPublisher<[IndexPath], Never> { get }
 }
 
 protocol HomeViewModel: HomeViewModelInput, HomeViewModelOutput {}
@@ -42,15 +44,19 @@ final class DefaultHomeViewModel: HomeViewModel {
   private var subscriptions = Set<AnyCancellable>()
   private let fetchProductUseCase: any FetchProductUseCase
   private let deleteProductUseCase: any DeleteProductUseCase
+  /// 제품의 update 유무 및 업데이트된 indexPath를 저장하는 변수입니다.
+  private var updatedIndexPath: IndexPath?
   
   // MARK: - Output
   private var reloadDataSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
-  private var deleteRowsSubject: PassthroughSubject<(IndexPath, SwipeCompletion), Never> = PassthroughSubject()
-
+  private var deleteRowsSubject: PassthroughSubject<([IndexPath], SwipeCompletion), Never> = PassthroughSubject()
+  private var reloadRowsSubject: PassthroughSubject<[IndexPath], Never> = PassthroughSubject()
   
   var reloadDataPublisher: AnyPublisher<Void, Never> { self.reloadDataSubject.eraseToAnyPublisher() }
-  var deleteRowsPublisher: AnyPublisher<(IndexPath, SwipeCompletion), Never> { self.deleteRowsSubject.eraseToAnyPublisher() }
+  var deleteRowsPublisher: AnyPublisher<([IndexPath], SwipeCompletion), Never>
+  { self.deleteRowsSubject.eraseToAnyPublisher() }
   var errorPublisher: AnyPublisher<(any Error)?, Never> { self.$error.eraseToAnyPublisher() }
+  var reloadRowsPublisher: AnyPublisher<[IndexPath], Never> { self.reloadRowsSubject.eraseToAnyPublisher() }
   
   @Published private var error: (any Error)?
   
@@ -68,7 +74,6 @@ final class DefaultHomeViewModel: HomeViewModel {
   
   // MARK: - Input
   func viewDidLoad() {
-    // firebase store에 접근해서 데이터 fetch
     self.fetchProductUseCase.fetchProducts()
       .receive(on: DispatchQueue.main)
       .sink { [weak self] completion in
@@ -102,7 +107,7 @@ final class DefaultHomeViewModel: HomeViewModel {
         self?.error = error
       } receiveValue: { _ in
         self.items.remove(at: indexPath.row)
-        self.deleteRowsSubject.send((indexPath, handler))
+        self.deleteRowsSubject.send(([indexPath], handler))
       }
       .store(in: &self.subscriptions)
   }
@@ -116,7 +121,13 @@ final class DefaultHomeViewModel: HomeViewModel {
   }
   
   func didTapAddProductButton() {
-    self.actions.showProductPage()
+    self.actions.showProductPage(nil)
+  }
+  
+  func didSelectRow(at indexPath: IndexPath) {
+    let product = self.items[indexPath.row]
+    self.updatedIndexPath = indexPath
+    self.actions.showProductPage(product)
   }
   
   // MARK: - Private Helpers
@@ -124,10 +135,25 @@ final class DefaultHomeViewModel: HomeViewModel {
     self.actions.productPublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] product in
-        guard let product = product else { return }
-        self?.items.append(product)
-        self?.reloadDataSubject.send()
+        guard let product = product else {
+          // 뒤로가기
+          self?.updatedIndexPath = nil
+          return
+        }
+        // 저장버튼
+        self?.updateItems(product: product)
       }
       .store(in: &self.subscriptions)
+  }
+  
+  private func updateItems(product: Product) {
+    if let updatedIndexPath = self.updatedIndexPath { // edit
+      self.items[updatedIndexPath.row] = product
+      self.reloadRowsSubject.send([updatedIndexPath])
+      self.updatedIndexPath = nil
+    } else { // create
+      self.items.append(product)
+      self.reloadDataSubject.send()
+    }
   }
 }

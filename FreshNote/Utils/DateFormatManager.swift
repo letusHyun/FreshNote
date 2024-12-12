@@ -8,24 +8,35 @@
 import Foundation
 
 struct DateFormatManager {
-  private let formatter: DateFormatter = {
+  // 날짜와 시간을 모두 포함하는 포맷
+  private let fullFormatter: DateFormatter = {
     let formatter = DateFormatter()
-    formatter.dateFormat = "yy-MM-dd"
+    formatter.dateFormat = "yy.MM.dd HH:mm:ss"
+    formatter.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+    formatter.locale = Locale(identifier: "ko_KR")
     return formatter
   }()
   
-  /// dateFormat이 적용된 Date를 반환합니다.
+  // 날짜만 포함하는 포맷
+  private let displayFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yy.MM.dd"
+    formatter.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+    formatter.locale = Locale(identifier: "ko_KR")
+    return formatter
+  }()
+  
   func makeCurrentDate() -> Date {
-    let dateString = self.string(from: Date())
-    return self.formatter.date(from: dateString)!
+    let now = Date()
+    let fullDateString = fullFormatter.string(from: now)
+    return fullFormatter.date(from: fullDateString) ?? now
   }
   
-  /// Date를 dateString으로 반환합니다.
   func string(from date: Date) -> String {
-    return self.formatter.string(from: date)
+    return displayFormatter.string(from: date)
   }
   
   func date(from string: String) -> Date? {
-    return formatter.date(from: string)
+    return displayFormatter.date(from: string)
   }
 }

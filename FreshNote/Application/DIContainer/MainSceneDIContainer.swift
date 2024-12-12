@@ -45,7 +45,12 @@ private extension MainSceneDIContainer {
   }
   
   func makeProductViewModel(actions: ProductViewModelActions, mode: ProductViewModelMode) -> any ProductViewModel {
-    return DefaultProductViewModel(saveProductUseCase: self.makeSaveProductUseCase(), actions: actions, mode: mode)
+    return DefaultProductViewModel(
+      saveProductUseCase: self.makeSaveProductUseCase(),
+      updateProductUseCase: self.makeUpdateProductUseCase(),
+      actions: actions,
+      mode: mode
+    )
   }
   
   func makePhotoBottomSheetViewModel(actions: PhotoBottomSheetViewModelActions) -> any PhotoBottomSheetViewModel {
@@ -59,6 +64,13 @@ private extension MainSceneDIContainer {
   }
   
   // MARK: - Domain Layer
+  func makeUpdateProductUseCase() -> any UpdateProductUseCase {
+    return DefaultUpdateProductUseCase(
+      productRepository: self.makeProductRepository(),
+      imageRepository: self.makeImageRepository()
+    )
+  }
+  
   func makeDeleteProductUseCase() -> any DeleteProductUseCase {
     return DefaultDeleteProductUseCase(
       imageRepository: self.makeImageRepository(),

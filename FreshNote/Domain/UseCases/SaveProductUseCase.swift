@@ -37,6 +37,7 @@ final class DefaultSaveProductUseCase: SaveProductUseCase {
   }
   
   func execute(requestValue: SaveProductUseCaseRequestValue) -> AnyPublisher<Product, any Error> {
+    // 업데이트 된 경우
     // 이미지가 존재하지 않는 경우
     guard let imageData = requestValue.imageData else {
       let product = self.makeProduct(from: requestValue, url: nil)

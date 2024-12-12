@@ -103,15 +103,26 @@ extension HomeViewController {
       }
       .store(in: &self.subscriptions)
     
-    viewModel.reloadDataPublisher.sink { [weak self] in
+    viewModel.reloadDataPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
       self?.tableView.reloadData()
     }
     .store(in: &self.subscriptions)
     
-    viewModel.deleteRowsPublisher.sink { [weak self] indexPath, swipeCompletion in
-      self?.tableView.deleteRows(at: [indexPath], with: .fade)
+    viewModel.deleteRowsPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] indexPaths, swipeCompletion in
+      self?.tableView.deleteRows(at: indexPaths, with: .fade)
       swipeCompletion(true)
     }.store(in: &self.subscriptions)
+    
+    viewModel.reloadRowsPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] indexPaths in
+        self?.tableView.reloadRows(at: indexPaths, with: .automatic)
+      }
+      .store(in: &self.subscriptions)
   }
 }
 
@@ -160,6 +171,10 @@ extension HomeViewController: UITableViewDelegate {
   
   func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
     return 100
+  }
+  
+  func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    self.viewModel.didSelectRow(at: indexPath)
   }
 }
 

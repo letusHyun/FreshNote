@@ -72,7 +72,8 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
     // TODO: - 현재 날자를 placeholder로 보여주는 알고리즘 작성하기
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy"
-    let yearString = dateFormatter.string(from: Date())
+    let date = DateFormatManager().makeCurrentDate()
+    let yearString = dateFormatter.string(from: date)
     
     tf.placeholder = String("ex)" + yearString.suffix(2) + ".01.01")
     tf.layer.cornerRadius = 8
@@ -144,6 +145,7 @@ final class ProductViewController: BaseViewController, KeyboardEventable {
     self.bind()
     self.bindAction()
     self.bindKeyboard()
+    self.viewModel.viewDidLoad()
   }
   
   override func viewWillAppear(_ animated: Bool) {
@@ -278,6 +280,13 @@ private extension ProductViewController {
         self?.expirationTextField.text = text
       }
       .store(in: &self.subscriptions)
+    
+    self.viewModel.setupProductPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] product in
+        self?.setupEditUI(with: product)
+      }
+      .store(in: &self.subscriptions)
   }
   
   // MARK: - Actions
@@ -302,12 +311,8 @@ private extension ProductViewController {
       return !titleText.isEmpty && isValidExpirationFormat && !text.isEmpty
     }
     .sink { [weak self] isValid in
-      self?.saveButton.isEnabled = isValid
-      if isValid {
-        self?.saveButton.setTitleColor(UIColor(fnColor: .gray3), for: .normal)
-      } else {
-        self?.saveButton.setTitleColor(UIColor(fnColor: .gray0), for: .normal)
-      }
+      guard let self = self else { return }
+      self.updateSaveButtonState(isValid)
     }
     .store(in: &self.subscriptions)
     
@@ -333,7 +338,7 @@ private extension ProductViewController {
               let memo = self.descriptionTextView.text
         else { return }
         
-        let imageData = self.viewModel.isSelectedImage
+        let imageData = self.viewModel.isCustomImage
         ? self.imageView.image?.jpegData(compressionQuality: 0.8)
         : nil
         
@@ -376,6 +381,36 @@ extension ProductViewController {
       let transform = self.isCategoryToggleImageViewRotated ? .identity : CGAffineTransform(rotationAngle: .pi)
       self.categoryToggleImageView.transform = transform
       self.isCategoryToggleImageViewRotated.toggle()
+    }
+  }
+  
+  private func setupEditUI(with product: Product) {
+    if let url = product.imageURL {
+      URLSession.shared.dataTaskPublisher(for: url)
+        .map { UIImage(data: $0.data) }
+        .replaceError(with: nil)
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] image in
+          self?.imageView.image = image
+        }
+        .store(in: &self.subscriptions)
+    }
+    self.titleTextField.text = product.name
+    self.categoryTextField.text = product.category
+    
+    let dateFormatManager = DateFormatManager()
+    self.expirationTextField.text = dateFormatManager.string(from: product.expirationDate)
+    self.descriptionTextView.text = product.memo
+    self.descriptionTextView.updatePlaceholderVisibility()
+    self.updateSaveButtonState(true)
+  }
+  
+  private func updateSaveButtonState(_ isValid: Bool) {
+    self.saveButton.isEnabled = isValid
+    if isValid {
+      self.saveButton.setTitleColor(UIColor(fnColor: .gray3), for: .normal)
+    } else {
+      self.saveButton.setTitleColor(UIColor(fnColor: .gray0), for: .normal)
     }
   }
 }

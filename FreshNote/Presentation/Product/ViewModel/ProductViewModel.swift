@@ -37,7 +37,8 @@ protocol ProductViewModelOutput {
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { get }
   var errorPublisher: AnyPublisher<Error?, Never> { get }
   var expirationTextPublisher: AnyPublisher<String, Never> { get }
-  var isSelectedImage: Bool { get }
+  var isCustomImage: Bool { get }
+  var setupProductPublisher: AnyPublisher<Product, Never> { get }
 }
 
 enum ExpirationOutputState {
@@ -49,7 +50,7 @@ enum ExpirationOutputState {
 
 enum ProductViewModelMode {
   case create
-  case edit
+  case edit(Product)
 }
 
 final class DefaultProductViewModel: ProductViewModel {
@@ -67,7 +68,12 @@ final class DefaultProductViewModel: ProductViewModel {
   /// 이전 text 길이를 저장해서 delete 감지할 때 사용하는 변수입니다.
   private var previousExpirationTextLength = 0
   
-  var isSelectedImage: Bool = false
+  /// 사용자가 정의한 이미지인지 판별하는 변수입니다.
+  var isCustomImage: Bool = false
+  
+  private let saveProductUseCase: any SaveProductUseCase
+  
+  private let updateProductUseCase: any UpdateProductUseCase
   
   // MARK: - Output
   var categoryToggleAnimationPublisher: AnyPublisher<Void, Never> {
@@ -78,12 +84,13 @@ final class DefaultProductViewModel: ProductViewModel {
   var expirationPublisher: AnyPublisher<ExpirationOutputState, Never> { self.expirationSubject.eraseToAnyPublisher() }
   var expirationTextPublisher: AnyPublisher<String, Never> { $expirationFormattedText.eraseToAnyPublisher() }
   var errorPublisher: AnyPublisher<(any Error)?, Never> { self.$error.eraseToAnyPublisher() }
+  var setupProductPublisher: AnyPublisher<Product, Never> { self.setupProductSubejct.eraseToAnyPublisher() }
   
   private let categoryToggleAnimationSubject: PassthroughSubject<Void, Never> = .init()
   private let imageDataSubject: PassthroughSubject<Data?, Never> = .init()
   private let categorySubject: PassthroughSubject<String, Never> = .init()
   private let expirationSubject: PassthroughSubject<ExpirationOutputState, Never> = .init()
-  private let saveProductUseCase: any SaveProductUseCase
+  private let setupProductSubejct: PassthroughSubject<Product, Never> = .init()
   
   @Published private var expirationFormattedText = ""
   @Published private var error: (any Error)?
@@ -91,10 +98,12 @@ final class DefaultProductViewModel: ProductViewModel {
   // MARK: - LifeCycle
   init(
     saveProductUseCase: any SaveProductUseCase,
+    updateProductUseCase: any UpdateProductUseCase,
     actions: ProductViewModelActions,
     mode: ProductViewModelMode
   ) {
     self.saveProductUseCase = saveProductUseCase
+    self.updateProductUseCase = updateProductUseCase
     self.actions = actions
     self.mode = mode
   }
@@ -105,7 +114,12 @@ final class DefaultProductViewModel: ProductViewModel {
   
   // MARK: - Input
   func viewDidLoad() {
-    // 모드에 따라서 vc placeholder 유무 결정 및, dataFetch
+    switch self.mode {
+    case .create: break
+    case .edit(let product):
+      self.isCustomImage = product.imageURL != nil
+      self.setupProductSubejct.send(product)
+    }
   }
   
   func didTapBackButton() {
@@ -113,33 +127,59 @@ final class DefaultProductViewModel: ProductViewModel {
   }
   
   func didTapSaveButton(name: String, expiration: String, imageData: Data?, category: String, memo: String?) {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yy.MM.dd"
-    guard let date = dateFormatter.date(from: expiration) else { return }
+    let formatManager = DateFormatManager()
+    guard let date = formatManager.date(from: expiration) else { return }
     
-    let requestValue = SaveProductUseCaseRequestValue(
-      name: name,
-      expirationDate: date,
-      category: category,
-      memo: memo,
-      imageData: imageData,
-      isPinned: false
-    )
-    
-    self.saveProductUseCase.execute(requestValue: requestValue)
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] completion in
-        guard case .failure(let error) = completion else { return }
-        self?.error = error
-      } receiveValue: { [weak self] product in
-        self?.actions.pop(product)
-      }
-      .store(in: &self.subscriptions)
+    switch self.mode {
+    case .create:
+      let requestValue = SaveProductUseCaseRequestValue(
+        name: name,
+        expirationDate: date,
+        category: category,
+        memo: memo,
+        imageData: imageData,
+        isPinned: false
+      )
+      
+      self.saveProductUseCase
+        .execute(requestValue: requestValue)
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] completion in
+          guard case .failure(let error) = completion else { return }
+          self?.error = error
+        } receiveValue: { [weak self] product in
+          self?.actions.pop(product)
+        }
+        .store(in: &self.subscriptions)
+    case .edit(let product):
+      let updatedProductExcludedImageURL = Product(
+        did: product.did,
+        name: name,
+        expirationDate: date,
+        category: category,
+        memo: memo,
+        imageURL: product.imageURL,
+        isPinned: product.isPinned,
+        creationDate: product.creationDate
+      )
+      
+      self.updateProductUseCase
+        .execute(product: updatedProductExcludedImageURL, newImageData: imageData)
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] completion in
+          guard case .failure(let error) = completion else { return }
+          self?.error = error
+        } receiveValue: { [weak self] product in
+          self?.actions.pop(product)
+        }
+        .store(in: &self.subscriptions)
+      
+    }
   }
   
   func didTapImageView() {
     self.actions.showPhotoBottomSheet({ [weak self] data in
-      self?.isSelectedImage = data != nil
+      self?.isCustomImage = data != nil
       self?.imageDataSubject.send(data)
     })
   }
@@ -159,6 +199,8 @@ final class DefaultProductViewModel: ProductViewModel {
     guard let text = text, text.count >= Constants.expirationValidTextCount else {
       let dateFormatter = DateFormatter()
       dateFormatter.dateFormat = "yyyy"
+      dateFormatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+      dateFormatter.locale = Locale(identifier: "ko_KR")
       let yearString = dateFormatter.string(from: Date())
       
       let exampleDate = String("ex)" + yearString.suffix(2) + ".01.01")

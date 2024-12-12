@@ -38,8 +38,9 @@ extension HomeCoordinator {
       self?.showNotificationPage()
     }, showSearchPage: { [weak self] in
       self?.showSearchPage()
-    }, showProductPage: { [weak self] in
-      self?.showProductPage()
+    }, showProductPage: { [weak self] product in
+      let mode: ProductViewModelMode = product.map { .edit($0) } ?? .create
+      self?.showProductPage(mode: mode)
     }, productPublisher: self.productSubject.eraseToAnyPublisher()
     )
     
@@ -68,10 +69,10 @@ extension HomeCoordinator {
     childCoordinator.start()
   }
   
-  private func showProductPage() {
+  private func showProductPage(mode: ProductViewModelMode) {
     let childCoordinator = self.dependencies.makeProductCoordinator(
       navigationController: self.navigationController,
-      mode: .create
+      mode: mode
     )
     childCoordinator.productCoordinatorFinishDelegate = self
     self.childCoordinators[childCoordinator.identifier] = childCoordinator

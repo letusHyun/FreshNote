@@ -20,6 +20,10 @@ final class DefaultProductRepository: ProductRepository {
     self.backgroundQueue = backgroundQueue
   }
 
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
+  }
+  
   func fetchProducts() -> AnyPublisher<[Product], any Error> {
     guard let userID = FirebaseUserManager.shared.userID else {
       return Fail(error: FirebaseUserError.invalidUid).eraseToAnyPublisher()

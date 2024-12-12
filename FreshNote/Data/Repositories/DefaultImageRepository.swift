@@ -20,6 +20,10 @@ final class DefaultImageRepository: ImageRepository {
     self.backgroundQueue = backgroundQueue
   }
   
+  deinit {
+    print("DEBUG: \(Self.self) deinit")
+  }
+  
   func saveImage(with data: Data, fileName: String) -> AnyPublisher<URL, any Error> {
     guard let userID = FirebaseUserManager.shared.userID else {
       return Fail(error: FirebaseUserError.invalidUid).eraseToAnyPublisher()

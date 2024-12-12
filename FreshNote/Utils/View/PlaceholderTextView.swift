@@ -102,7 +102,7 @@ final class PlaceholderTextView: UITextView {
     ])
   }
   
-  private func updatePlaceholderVisibility() {
+  func updatePlaceholderVisibility() {
     self.placeholderLabel.isHidden = !text.isEmpty
   }
   
