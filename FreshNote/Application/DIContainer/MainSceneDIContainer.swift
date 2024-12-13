@@ -8,7 +8,6 @@
 import UIKit
 
 final class MainSceneDIContainer {
-  
   struct Dependencies {
     // service객체
   }
@@ -41,7 +40,10 @@ private extension MainSceneDIContainer {
   }
   
   func makeSearchViewModel(actions: SearchViewModelActions) -> any SearchViewModel {
-    return DefaultSearchViewModel(actions: actions)
+    return DefaultSearchViewModel(
+      actions: actions,
+      recentProductQueriesUseCase: self.makeRecentProductQueriesUseCase()
+    )
   }
   
   func makeProductViewModel(actions: ProductViewModelActions, mode: ProductViewModelMode) -> any ProductViewModel {
@@ -64,6 +66,10 @@ private extension MainSceneDIContainer {
   }
   
   // MARK: - Domain Layer
+  func makeRecentProductQueriesUseCase() -> any RecentProductQueriesUseCase {
+    return DefaultRecentProductQueriesUseCase(productQueriesRepository: self.makeProductQueriesRepository())
+  }
+  
   func makeUpdateProductUseCase() -> any UpdateProductUseCase {
     return DefaultUpdateProductUseCase(
       productRepository: self.makeProductRepository(),
@@ -90,6 +96,10 @@ private extension MainSceneDIContainer {
   }
   
   // MARK: - Data Layer
+  func makeProductQueriesRepository() -> any ProductQueriesRepository {
+    return DefaultProductQueriesRepository(productQueryPersistentStorage: self.makeProductQueryStorage())
+  }
+  
   func makeProductRepository() -> any ProductRepository {
     return DefaultProductRepository(firebaseNetworkService: self.makeFirebaseNetworkService())
   }
@@ -100,6 +110,19 @@ private extension MainSceneDIContainer {
   
   func makeFirebaseNetworkService() -> any FirebaseNetworkService {
     return DefaultFirebaseNetworkService()
+  }
+  
+  // MARK: - Persistent Storage
+  func makeProductQueryStorage() -> any ProductQueryStorage {
+    return CoreDataProductQueryStorage(coreDataStorage: self.makePersistentCoreDataStorage())
+  }
+  
+  func makePersistentCoreDataStorage() -> any CoreDataStorage {
+    return PersistentCoreDataStorage()
+  }
+  
+  func makeMemoryCoreDataStorage() -> any CoreDataStorage {
+    return MemoryCoreDataStorage()
   }
 }
 

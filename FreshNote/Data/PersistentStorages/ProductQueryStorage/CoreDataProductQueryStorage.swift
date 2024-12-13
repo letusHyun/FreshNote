@@ -10,9 +10,9 @@ import CoreData
 import Foundation
 
 final class CoreDataProductQueryStorage {
-  private let coreDataStorage: CoreDataStorage
+  private let coreDataStorage: any CoreDataStorage
   
-  init(coreDataStorage: CoreDataStorage = .shared) {
+  init(coreDataStorage: any CoreDataStorage) {
     self.coreDataStorage = coreDataStorage
   }
 }

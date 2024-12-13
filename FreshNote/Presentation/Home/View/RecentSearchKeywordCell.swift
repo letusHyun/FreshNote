@@ -53,7 +53,7 @@ final class RecentSearchKeywordCell: UITableViewCell {
 
 // MARK: - Helpers
 extension RecentSearchKeywordCell {
-  func configure(keyword: RecentSearchKeyword) {
+  func configure(keyword: ProductQuery) {
     keywordLabel.text = keyword.keyword
   }
 }

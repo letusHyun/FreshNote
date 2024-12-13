@@ -20,7 +20,7 @@ extension ProductQueryEntity {
 extension ProductQueryEntity {
   func toDomain() -> ProductQuery {
     return .init(
-      keyword: self.keyword ?? "",
+      keyword: self.keyword,
       uuidString: self.uuidString
     )
   }
